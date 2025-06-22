@@ -11,7 +11,7 @@ pub fn spawn_grid_helper(
     grid_spacing: f32,
     grid_color: Color,
     center_x_line_color: Color,
-    center_z_line_color: Color, 
+    center_y_line_color: Color, 
 ) -> Entity {
 
     // Create the grid lines
@@ -21,22 +21,22 @@ pub fn spawn_grid_helper(
     let mut offset: f32;
     // X-lines
     for i in 1..=half_num_lines {
-        offset = grid_spacing * i as f32; // z-offset
+        offset = grid_spacing * i as f32; // y-offset
         lines.push(
-            (Vec3::new(-half_grid_size, 0.0, offset), Vec3::new(half_grid_size, 0.0, offset))
+            (Vec3::new(-half_grid_size, offset, 0.0), Vec3::new(half_grid_size, offset, 0.0))
         );
         lines.push(
-            (Vec3::new(-half_grid_size, 0.0, -offset), Vec3::new(half_grid_size, 0.0, -offset))
+            (Vec3::new(-half_grid_size, -offset, 0.0), Vec3::new(half_grid_size, -offset, 0.0))
         );
     }
-    // Z-lines
+    // Y-lines
     for i in 1..=half_num_lines {
         offset = grid_spacing * i as f32; // x-offset
         lines.push(
-            (Vec3::new(offset, 0.0, -half_grid_size), Vec3::new(offset, 0.0, half_grid_size))
+            (Vec3::new(offset, -half_grid_size, 0.0), Vec3::new(offset, half_grid_size, 0.0))
         );
         lines.push(
-            (Vec3::new(-offset, 0.0, -half_grid_size), Vec3::new(-offset, 0.0, half_grid_size))
+            (Vec3::new(-offset, -half_grid_size, 0.0), Vec3::new(-offset, half_grid_size, 0.0))
         );
     }
 
@@ -57,16 +57,16 @@ pub fn spawn_grid_helper(
         )),
     )).id();
 
-    // Center X-line Entity
-    let center_z_line = commands.spawn((
+    // Center Y-line Entity
+    let center_y_line = commands.spawn((
         Mesh3d(meshes.add(LineList {
             lines: vec![
-                (Vec3::new(0.0, 0.0, -half_grid_size), Vec3::new(0.0, 0.0, half_grid_size)),
+                (Vec3::new(0.0, -half_grid_size, 0.0), Vec3::new(0.0, half_grid_size, 0.0)),
             ],
         })),
         MeshMaterial3d(materials.add(
             StandardMaterial {
-                base_color: center_z_line_color,
+                base_color: center_y_line_color,
                 cull_mode: None,
                 unlit: true,
                 ..default()
@@ -90,6 +90,6 @@ pub fn spawn_grid_helper(
         .spawn(grid_lines)
         .add_children(&[
             center_x_line,
-            center_z_line,
+            center_y_line,
         ]).id()
 }

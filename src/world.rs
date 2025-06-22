@@ -32,6 +32,15 @@ fn spawn_world(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
+    // Set up the materials.
+    let floor_material = materials.add(
+        StandardMaterial {
+            base_color: GREY.into(),
+            cull_mode: None, // Turning off culling keeps the plane visible when viewed from beneath.
+            ..default()
+        }
+    );
+
     // Spawn Grid
     let grid_helper_entity = spawn_grid_helper(
         &mut commands,
@@ -40,8 +49,8 @@ fn spawn_world(
         2.0 * HALF_PLANE_LENGTH, // Size of the grid
         GRID_SPACING, // Spacing of the grid lines
         DARK_SLATE_GRAY.into(), // Color of the grid lines
-        GREEN.into(), // Color of the center X-line (here Y-line)
-        RED.into(),   // Color of the center Z-line (here X-line)
+        RED.into(),   // Color of the center X-line
+        GREEN.into(), // Color of the center Y-line
     );
 
     // Spawn Axes Helper
@@ -54,16 +63,10 @@ fn spawn_world(
 
     // Floor bundle
     let floor = (
-        Mesh3d(meshes.add(Plane3d::new(Vec3::Y, Vec2::splat(HALF_PLANE_LENGTH)))),
-        MeshMaterial3d(materials.add(
-            StandardMaterial {
-                base_color: GREY.into(),
-                cull_mode: None, // Turning off culling keeps the plane visible when viewed from beneath.
-                ..default()
-            }
-        ))
+        Mesh3d(meshes.add(Plane3d::new(Vec3::Z, Vec2::splat(HALF_PLANE_LENGTH)))),
+        MeshMaterial3d(floor_material),
+        Pickable::IGNORE, // Disable picking for the ground plane.
     );
-
 
     commands
         .spawn(floor)

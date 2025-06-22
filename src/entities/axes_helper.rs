@@ -3,7 +3,7 @@ use bevy::render::mesh::{ConeAnchor, ConeMeshBuilder, CylinderAnchor, CylinderMe
 
 use std::f32::consts::FRAC_PI_2;
 
-use crate::constants::{BLUE_MATERIAL, GREEN_MATERIAL, RED_MATERIAL, TO_Y_UP, YELLOW_MATERIAL};
+use crate::constants::{BLUE_MATERIAL, GREEN_MATERIAL, RED_MATERIAL, YELLOW_MATERIAL};
 
 // https://users.rust-lang.org/t/solved-placement-of-mut-in-function-parameters/19891
 pub fn spawn_axes_helper(
@@ -37,9 +37,8 @@ pub fn spawn_axes_helper(
         Mesh3d(meshes.add(cylinder_mesh)),
         MeshMaterial3d(materials.add(RED_MATERIAL.clone())),
         Transform::from_rotation(
-            TO_Y_UP *
             Quat::from_rotation_z(-FRAC_PI_2) // Rotate to align with X-axis
-        ) 
+        )
     )).with_child(( // arrow
         Mesh3d(meshes.add(cone_mesh)),
         MeshMaterial3d(materials.add(RED_MATERIAL.clone())),
@@ -50,19 +49,17 @@ pub fn spawn_axes_helper(
     let yaxis = commands.spawn(( // base
         Mesh3d(meshes.add(cylinder_mesh)),
         MeshMaterial3d(materials.add(GREEN_MATERIAL.clone())),
-        Transform::from_rotation(TO_Y_UP)
     )).with_child(( // arrow
         Mesh3d(meshes.add(cone_mesh)),
         MeshMaterial3d(materials.add(GREEN_MATERIAL.clone())),
         Transform::from_translation(0.9 * size * Vec3::Y)
     )).id();
 
-    // Spawn the Y-axis helper
+    // Spawn the Z-axis helper
     let zaxis = commands.spawn(( // base
         Mesh3d(meshes.add(cylinder_mesh)),
         MeshMaterial3d(materials.add(BLUE_MATERIAL.clone())),
         Transform::from_rotation(
-            TO_Y_UP *
             Quat::from_rotation_x(FRAC_PI_2) // Rotate to align with Z-axis
         ) 
     )).with_child(( // arrow

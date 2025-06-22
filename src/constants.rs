@@ -1,5 +1,8 @@
 use std::sync::LazyLock;
-use bevy::prelude::{StandardMaterial, Srgba, Quat};
+use bevy::{
+    math::DQuat,
+    prelude::{StandardMaterial, Srgba, Quat}
+};
 
 /// Geometric constants
 // pub static ENU_TO_NED_ROT: LazyLock<Quat> = LazyLock::new(|| {
@@ -18,6 +21,7 @@ pub const ENU_TO_NED: Quat = Quat::from_xyzw(
 
 pub const NED_TO_ENU: Quat = ENU_TO_NED;
 
+// Rotation constants to convert from Z-up (Physics) direction to Y-up (Bevy) direction coordinate systems.
 pub const TO_Y_UP: Quat = Quat::from_xyzw(
     0.5, // x
     0.5, // y
@@ -25,11 +29,19 @@ pub const TO_Y_UP: Quat = Quat::from_xyzw(
     -0.5 // w
 );
 
+// Rotation constants to convert from Y-up (Bevy) direction to Z-up (Physics) direction coordinate systems.
 pub const TO_Z_UP: Quat = Quat::from_xyzw(
     0.5, // x
     0.5, // y
     0.5, // z
     0.5 // w
+);
+
+pub const ENU_TO_NED_F64: DQuat = DQuat::from_xyzw(
+    0.707106781186547524400844362104884, // x = sqrt(2) / 2
+    0.707106781186547524400844362104884, // y = sqrt(2) / 2
+    0.0,                                 // z
+    0.0                                  // w
 );
 
 // Default materials
