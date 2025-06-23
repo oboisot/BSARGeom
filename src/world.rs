@@ -10,12 +10,16 @@ pub struct WorldPlugin;
 
 impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PostStartup, (
+        app.add_systems(Startup, (
             insert_ambient_light,
             spawn_world            
         ));
+        app.add_systems(PostStartup, force_init_world_transform);
     }
 }
+
+#[derive(Component)]
+struct Floor;
 
 fn insert_ambient_light(mut commands: Commands) {
     let ambient_light = AmbientLight {
@@ -73,8 +77,19 @@ fn spawn_world(
 
     commands
         .spawn(floor)
+        .insert(Floor)
         .add_children(&[
             grid_helper_entity,
             axes_helper_entity
         ]);
+}
+
+
+fn force_init_world_transform(
+    mut floor_q: Query<&mut Transform, With<Floor>>,
+) {
+    let mut transform = floor_q
+        .single_mut()
+        .expect("Can't get `Floor` transform");
+    *transform = Transform::IDENTITY;
 }

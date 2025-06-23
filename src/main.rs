@@ -20,12 +20,11 @@ fn main() {
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         position: WindowPosition::Automatic,
-                        title: "RustSAR Geometry visualizer".to_string(),
+                        title: "BSAR Geometry visualizer [based on RustSAR]".to_string(),
                         ..default()
                     }),
                     ..default()
                 }),
-            // MeshPickingPlugin,
             PanOrbitCameraPlugin,
             CameraPlugin,
             WorldPlugin,

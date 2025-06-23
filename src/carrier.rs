@@ -11,7 +11,7 @@ pub struct CarriersPlugin;
 
 impl Plugin for CarriersPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PostStartup, (
+        app.add_systems(Startup, (
             spawn_tx_carrier,
             spawn_rx_carrier
         ));
@@ -160,7 +160,7 @@ fn spawn_rx_carrier(
     // States
     // Carrier state
     let mut rx_carrier_state = CarrierState {
-        heading_rad: 345.0f64.to_radians(), // Heading in radians
+        heading_rad: 0.0, // Heading in radians
         elevation_rad: 0.0, // Elevation in radians
         bank_rad: 0.0, // Bank in radians
         height_m: 1000.0, // Height in meters
@@ -169,7 +169,7 @@ fn spawn_rx_carrier(
     };
     // Antenna state (relative to carrier NED frame)
     let rx_antenna_state = AntennaState {
-        heading_rad: 90.0f64.to_radians(), // Heading in radians
+        heading_rad: 80.0f64.to_radians(), // Heading in radians
         elevation_rad: -15.0f64.to_radians(), // Elevation in radians
         bank_rad: 0.0, // Bank in radians
     };
