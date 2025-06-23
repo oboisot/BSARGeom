@@ -62,7 +62,7 @@ pub static RED_MATERIAL: LazyLock<StandardMaterial> = LazyLock::new(|| {
 pub static GREEN_MATERIAL: LazyLock<StandardMaterial> = LazyLock::new(|| {
     StandardMaterial {
         base_color: Srgba::GREEN.into(),
-        cull_mode: None,
+        // cull_mode: None,
         unlit: true,
         ..Default::default()
     }

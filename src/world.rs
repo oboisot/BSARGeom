@@ -18,7 +18,13 @@ impl Plugin for WorldPlugin {
 }
 
 #[derive(Component)]
-struct Floor;
+struct WorldFloor;
+
+#[derive(Component)]
+struct WorldGridHelper;
+
+#[derive(Component)]
+struct WorldAxesHelper;
 
 fn insert_ambient_light(mut commands: Commands) {
     let ambient_light = AmbientLight {
@@ -39,16 +45,7 @@ fn spawn_world(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    // Set up the materials.
-    let floor_material = materials.add(
-        StandardMaterial {
-            base_color: GREY.into(),
-            cull_mode: Some(Face::Back),
-            ..default()
-        }
-    );
-
-    // Spawn Grid
+    // Grid helper
     let grid_helper_entity = spawn_grid_helper(
         &mut commands,
         &mut meshes,
@@ -60,7 +57,12 @@ fn spawn_world(
         GREEN.into(), // Color of the center Y-line
     );
 
-    // Spawn Axes Helper
+    commands
+        .entity(grid_helper_entity)
+        .insert(WorldGridHelper)
+        .insert(Name::new("World grid helper"));
+
+    // Axes Helper
     let axes_helper_entity = spawn_axes_helper(
         &mut commands,
         &mut meshes,
@@ -68,7 +70,21 @@ fn spawn_world(
         GRID_SPACING // Size of the axes
     );
 
+    commands
+        .entity(axes_helper_entity)
+        .insert(WorldAxesHelper)
+        .insert(Name::new("World axes helper"));
+
     // Floor bundle
+    let floor_material = materials.add(
+        StandardMaterial {
+            base_color: GREY.into(),
+            cull_mode: Some(Face::Back),
+            unlit: true,
+            ..default()
+        }
+    );
+
     let floor = (
         Mesh3d(meshes.add(Plane3d::new(Vec3::Y, Vec2::splat(HALF_PLANE_LENGTH)))),
         MeshMaterial3d(floor_material)
@@ -76,7 +92,8 @@ fn spawn_world(
 
     commands
         .spawn(floor)
-        .insert(Floor)
+        .insert(WorldFloor)
+        .insert(Name::new("World floor"))
         .add_children(&[
             grid_helper_entity,
             axes_helper_entity

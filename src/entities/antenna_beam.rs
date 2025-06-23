@@ -12,7 +12,6 @@ pub fn spawn_antenna_beam(
     materials: &mut ResMut<Assets<StandardMaterial>>,
     elevation_beam_width_rad: f64,
     azimuth_beam_width_rad: f64,
-    // color: Color,
     material: StandardMaterial,
 ) -> Entity {
     const CONE_LENGTH: f64 = 1e6; // Height of the antenna beam
