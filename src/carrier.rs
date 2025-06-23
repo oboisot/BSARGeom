@@ -11,7 +11,10 @@ pub struct CarriersPlugin;
 
 impl Plugin for CarriersPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, (spawn_tx_carrier, spawn_rx_carrier));
+        app.add_systems(PostStartup, (
+            spawn_tx_carrier,
+            spawn_rx_carrier
+        ));
     }
 }
 
@@ -118,14 +121,21 @@ fn spawn_tx_carrier(
         .insert(Tx) // Mark as a transmitter
         .insert(Name::new("Tx Antenna"));
 
-    // Antenna beam entity    
+    // Antenna beam entity
+    let antenna_material = StandardMaterial {
+        base_color: Color::WHITE.with_alpha(0.25),
+        alpha_mode: AlphaMode::Blend,
+        cull_mode: None, // Disable culling to see the beam from all sides
+        unlit: true,
+        ..default()
+    }; 
     let tx_antenna_beam_entity = spawn_antenna_beam(
         &mut commands,
         &mut meshes,
         &mut materials,
         tx_antenna_beam_state.elevation_beam_width_rad, // Elevation beam width in radians
         tx_antenna_beam_state.azimuth_beam_width_rad,   // Azimuth beam width in radians
-        Color::WHITE.with_alpha(0.2), // Color of the antenna beam
+        antenna_material,
     );
     commands
         .entity(tx_antenna_beam_entity)
@@ -169,6 +179,8 @@ fn spawn_rx_carrier(
         azimuth_beam_width_rad: 5.0f64.to_radians(),   // Azimuth beam width in radians
     };
 
+    // Entities
+    // Carrier entity
     let rx_carrier_entity = spawn_axes_helper(
         &mut commands,
         &mut meshes,
@@ -203,13 +215,20 @@ fn spawn_rx_carrier(
         .insert(Name::new("Rx Antenna"));
 
     // Antenna beam entity
+    let antenna_material = StandardMaterial {
+        base_color: Color::BLACK.with_alpha(0.25),
+        alpha_mode: AlphaMode::Blend,
+        cull_mode: None, // Disable culling to see the beam from all sides
+        unlit: true,
+        ..default()
+    };
     let rx_antenna_beam_entity = spawn_antenna_beam(
         &mut commands,
         &mut meshes,
         &mut materials,
         rx_antenna_beam_state.elevation_beam_width_rad, // Elevation beam width in radians
         rx_antenna_beam_state.azimuth_beam_width_rad,   // Azimuth beam width in radians
-        Color::BLACK.with_alpha(0.2), // Color of the antenna beam
+        antenna_material,
     );
     commands
         .entity(rx_antenna_beam_entity)        
@@ -285,22 +304,20 @@ fn carrier_transform_from_state(
         carrier_state.height_m
     );
 
-    Transform::from_rotation(TO_Y_UP).mul_transform( // Transforms from Z-up to Y-up
-        Transform::from_translation(
-            Vec3::new(
-                carrier_state.position_m.x as f32,
-                carrier_state.position_m.y as f32,
-                carrier_state.position_m.z as f32
-            )
-        ).with_rotation(
-            Quat::from_xyzw(
-                carrier_rotation.x as f32,
-                carrier_rotation.y as f32,
-                carrier_rotation.z as f32,
-                carrier_rotation.w as f32
-            )
-        )
-    )
+    Transform {
+        translation: TO_Y_UP * Vec3::new( // Transforms from Z-up to Y-up
+            carrier_state.position_m.x as f32,
+            carrier_state.position_m.y as f32,
+            carrier_state.position_m.z as f32
+        ),
+        rotation: TO_Y_UP * Quat::from_xyzw( // Transforms from Z-up to Y-up
+            carrier_rotation.x as f32,
+            carrier_rotation.y as f32,
+            carrier_rotation.z as f32,
+            carrier_rotation.w as f32
+        ),
+        scale: Vec3::ONE
+    }
 }
 
 /// Computes antenna transform from antenna state

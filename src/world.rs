@@ -1,6 +1,7 @@
 use bevy::{
     color::palettes::css::{DARK_SLATE_GRAY, GREEN, GREY, RED},
-    prelude::*
+    prelude::*,
+    render::render_resource::Face,
 };
 
 use crate::entities::{spawn_axes_helper, spawn_grid_helper};
@@ -9,7 +10,10 @@ pub struct WorldPlugin;
 
 impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, (spawn_world, insert_ambient_light));
+        app.add_systems(PostStartup, (
+            insert_ambient_light,
+            spawn_world            
+        ));
     }
 }
 
@@ -36,7 +40,7 @@ fn spawn_world(
     let floor_material = materials.add(
         StandardMaterial {
             base_color: GREY.into(),
-            cull_mode: None, // Turning off culling keeps the plane visible when viewed from beneath.
+            cull_mode: Some(Face::Back),
             ..default()
         }
     );

@@ -7,7 +7,7 @@ pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_camera);
+        app.add_systems(PostStartup, spawn_camera);
     }
 }
 
@@ -35,8 +35,8 @@ fn spawn_camera(mut commands: Commands) {
             // Allow the camera to go upside down
             allow_upside_down: false,
             // Set the camera's up direction to Z-up. See: https://github.com/Plonq/bevy_panorbit_camera/blob/master/examples/swapped_axis.rs
-            // axis: [Vec3::X, Vec3::Z, Vec3::Y],
             ..default()
         },
+        Msaa::default() // Disable MSAA for performance
     ));
 }

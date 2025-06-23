@@ -12,7 +12,8 @@ pub fn spawn_antenna_beam(
     materials: &mut ResMut<Assets<StandardMaterial>>,
     elevation_beam_width_rad: f64,
     azimuth_beam_width_rad: f64,
-    color: Color,
+    // color: Color,
+    material: StandardMaterial,
 ) -> Entity {
     const CONE_LENGTH: f64 = 1e6; // Height of the antenna beam
     const CONE_MESH: ConeMeshBuilder = ConeMeshBuilder {
@@ -29,12 +30,7 @@ pub fn spawn_antenna_beam(
 
     commands.spawn((
         Mesh3d(meshes.add(CONE_MESH)),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: color,
-            alpha_mode: AlphaMode::Blend,
-            unlit: true,
-            ..default()
-        })),
+        MeshMaterial3d(materials.add(material)),
         Transform::from_scale(
             Vec3::new(scale_azi as f32, 1.0, scale_elv as f32)
         ).with_rotation(

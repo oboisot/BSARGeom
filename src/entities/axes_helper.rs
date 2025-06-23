@@ -3,7 +3,7 @@ use bevy::render::mesh::{ConeAnchor, ConeMeshBuilder, CylinderAnchor, CylinderMe
 
 use std::f32::consts::FRAC_PI_2;
 
-use crate::constants::{BLUE_MATERIAL, GREEN_MATERIAL, RED_MATERIAL, TO_Y_UP, YELLOW_MATERIAL};
+use crate::constants::{BLUE_MATERIAL, GREEN_MATERIAL, RED_MATERIAL, YELLOW_MATERIAL, TRANSFORM_TO_Y_UP};
 
 // https://users.rust-lang.org/t/solved-placement-of-mut-in-function-parameters/19891
 pub fn spawn_axes_helper(
@@ -72,7 +72,7 @@ pub fn spawn_axes_helper(
     let mut sphere_base = commands.spawn((
         Mesh3d(meshes.add(Sphere::new(0.0125 * size))),
         MeshMaterial3d(materials.add(YELLOW_MATERIAL.clone())),
-        Transform::from_rotation(TO_Y_UP) // Rotates axes to be Y-up
+        TRANSFORM_TO_Y_UP // Rotates axes to be Y-up
     ));
 
     // Axes helper entity

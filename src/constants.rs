@@ -1,7 +1,7 @@
 use std::sync::LazyLock;
 use bevy::{
     math::DQuat,
-    prelude::{StandardMaterial, Srgba, Quat}
+    prelude::{Quat, StandardMaterial, Srgba, Transform}
 };
 
 /// Geometric constants
@@ -28,6 +28,8 @@ pub const TO_Y_UP: Quat = Quat::from_xyzw(
     0.5, // z
     -0.5 // w
 );
+// Transform relative to TO_Y_UP rotation.
+pub const TRANSFORM_TO_Y_UP: Transform = Transform::from_rotation(TO_Y_UP);
 
 // Rotation constants to convert from Y-up (Bevy) direction to Z-up (Physics) direction coordinate systems.
 pub const TO_Z_UP: Quat = Quat::from_xyzw(
@@ -36,6 +38,9 @@ pub const TO_Z_UP: Quat = Quat::from_xyzw(
     0.5, // z
     0.5 // w
 );
+// Transform relative to TO_Z_UP rotation.
+pub const TRANSFORM_TO_Z_UP: Transform = Transform::from_rotation(TO_Z_UP);
+
 
 pub const ENU_TO_NED_F64: DQuat = DQuat::from_xyzw(
     0.707106781186547524400844362104884, // x = sqrt(2) / 2
@@ -48,7 +53,8 @@ pub const ENU_TO_NED_F64: DQuat = DQuat::from_xyzw(
 pub static RED_MATERIAL: LazyLock<StandardMaterial> = LazyLock::new(|| {
     StandardMaterial {
         base_color: Srgba::RED.into(),
-        cull_mode: None, // Turning off culling keeps the plane visible when viewed from beneath.
+        cull_mode: None,
+        unlit: true,
         ..Default::default()
     }
 });
@@ -56,7 +62,8 @@ pub static RED_MATERIAL: LazyLock<StandardMaterial> = LazyLock::new(|| {
 pub static GREEN_MATERIAL: LazyLock<StandardMaterial> = LazyLock::new(|| {
     StandardMaterial {
         base_color: Srgba::GREEN.into(),
-        cull_mode: None, // Turning off culling keeps the plane visible when viewed from beneath.
+        cull_mode: None,
+        unlit: true,
         ..Default::default()
     }
 });
@@ -64,7 +71,8 @@ pub static GREEN_MATERIAL: LazyLock<StandardMaterial> = LazyLock::new(|| {
 pub static BLUE_MATERIAL: LazyLock<StandardMaterial> = LazyLock::new(|| {
     StandardMaterial {
         base_color: Srgba::BLUE.into(),
-        cull_mode: None, // Turning off culling keeps the plane visible when viewed from beneath.
+        cull_mode: None,
+        unlit: true,
         ..Default::default()
     }
 });
@@ -72,7 +80,8 @@ pub static BLUE_MATERIAL: LazyLock<StandardMaterial> = LazyLock::new(|| {
 pub static YELLOW_MATERIAL: LazyLock<StandardMaterial> = LazyLock::new(|| {
     StandardMaterial {
         base_color: Srgba::new(1.0, 1.0, 0.0, 1.0).into(),
-        cull_mode: None, // Turning off culling keeps the plane visible when viewed from beneath.
+        cull_mode: None,
+        unlit: true,
         ..Default::default()
     }
 });
