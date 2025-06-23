@@ -1,8 +1,7 @@
 use bevy::{
     math::{DQuat, DVec3},
-    prelude::*, text::cosmic_text::fontdb::Query
+    prelude::*
 };
-use bevy_panorbit_camera::PanOrbitCamera;
 
 use crate::{
     constants::ENU_TO_NED_F64,

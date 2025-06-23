@@ -27,8 +27,8 @@ fn main() {
                 }),
             // MeshPickingPlugin,
             PanOrbitCameraPlugin,
-            WorldPlugin,
             CameraPlugin,
+            WorldPlugin,
             CarriersPlugin,
         ))
         .run();
