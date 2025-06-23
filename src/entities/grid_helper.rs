@@ -19,32 +19,31 @@ pub fn spawn_grid_helper(
     let half_num_lines = (half_grid_size / grid_spacing).floor() as usize;
     let mut lines = Vec::<(Vec3, Vec3)>::with_capacity(4 * half_num_lines);
     let mut offset: f32;
-    // X-lines
-    for i in 1..=half_num_lines {
-        offset = grid_spacing * i as f32; // y-offset
-        lines.push(
-            (Vec3::new(-half_grid_size, offset, 0.0), Vec3::new(half_grid_size, offset, 0.0))
-        );
-        lines.push(
-            (Vec3::new(-half_grid_size, -offset, 0.0), Vec3::new(half_grid_size, -offset, 0.0))
-        );
-    }
-    // Y-lines
+    // X-lines (=Z-lines in Bevy's Y-up coordinate system)
     for i in 1..=half_num_lines {
         offset = grid_spacing * i as f32; // x-offset
         lines.push(
-            (Vec3::new(offset, -half_grid_size, 0.0), Vec3::new(offset, half_grid_size, 0.0))
+            (Vec3::new(offset, 0.0, -half_grid_size), Vec3::new(offset, 0.0, half_grid_size))
         );
         lines.push(
-            (Vec3::new(-offset, -half_grid_size, 0.0), Vec3::new(-offset, half_grid_size, 0.0))
+            (Vec3::new(-offset, 0.0, -half_grid_size), Vec3::new(-offset, 0.0, half_grid_size))
         );
     }
-
-    // Center X-line Entity
+    // Y-lines (=X-lines in Bevy's Y-up coordinate system)
+    for i in 1..=half_num_lines {
+        offset = grid_spacing * i as f32; // z-offset
+        lines.push(
+            (Vec3::new(-half_grid_size, 0.0, offset), Vec3::new(half_grid_size, 0.0, offset))
+        );
+        lines.push(
+            (Vec3::new(-half_grid_size, 0.0, -offset), Vec3::new(half_grid_size, 0.0, -offset))
+        );
+    }
+    // Center X-line Entity (=Z-line in Bevy's Y-up coordinate system)
     let center_x_line = commands.spawn((
         Mesh3d(meshes.add(LineList {
             lines: vec![
-                (Vec3::new(-half_grid_size, 0.0, 0.0), Vec3::new(half_grid_size, 0.0, 0.0)),
+                (Vec3::new(0.0, 0.0, -half_grid_size), Vec3::new(0.0, 0.0, half_grid_size)),
             ],
         })),
         MeshMaterial3d(materials.add(
@@ -56,12 +55,11 @@ pub fn spawn_grid_helper(
             }
         )),
     )).id();
-
-    // Center Y-line Entity
+    // Center Y-line Entity (=X-line in Bevy's Y-up coordinate system)
     let center_y_line = commands.spawn((
         Mesh3d(meshes.add(LineList {
             lines: vec![
-                (Vec3::new(0.0, -half_grid_size, 0.0), Vec3::new(0.0, half_grid_size, 0.0)),
+                (Vec3::new(-half_grid_size, 0.0, 0.0), Vec3::new(half_grid_size, 0.0, 0.0)),
             ],
         })),
         MeshMaterial3d(materials.add(

@@ -4,7 +4,7 @@ use bevy::{
 };
 
 use crate::{
-    constants::ENU_TO_NED_F64,
+    constants::{ENU_TO_NED_F64, TO_Y_UP},
     entities::{spawn_antenna_beam, spawn_axes_helper}
 };
 pub struct CarriersPlugin;
@@ -285,18 +285,20 @@ fn carrier_transform_from_state(
         carrier_state.height_m
     );
 
-    Transform::from_translation(
-        Vec3::new(
-            carrier_state.position_m.x as f32,
-            carrier_state.position_m.y as f32,
-            carrier_state.position_m.z as f32
-        )
-    ).with_rotation(
-        Quat::from_xyzw(
-            carrier_rotation.x as f32,
-            carrier_rotation.y as f32,
-            carrier_rotation.z as f32,
-            carrier_rotation.w as f32
+    Transform::from_rotation(TO_Y_UP).mul_transform( // Transforms from Z-up to Y-up
+        Transform::from_translation(
+            Vec3::new(
+                carrier_state.position_m.x as f32,
+                carrier_state.position_m.y as f32,
+                carrier_state.position_m.z as f32
+            )
+        ).with_rotation(
+            Quat::from_xyzw(
+                carrier_rotation.x as f32,
+                carrier_rotation.y as f32,
+                carrier_rotation.z as f32,
+                carrier_rotation.w as f32
+            )
         )
     )
 }

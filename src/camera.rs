@@ -20,22 +20,22 @@ fn spawn_camera(mut commands: Commands) {
             // Set focal point (what the camera should look at)
             focus: Vec3::ZERO,
             // Set the starting position, relative to focus (overrides camera's transform).
-            yaw: Some(FRAC_PI_4),
-            pitch: Some(-FRAC_PI_4),
+            yaw: Some(-FRAC_PI_4),
+            pitch: Some(FRAC_PI_4),
             radius: Some(25980.76211353316), // = sqrt(HALF_PLANE_SIZE**2 * 3)
             // Set limits on rotation and zoom
             yaw_upper_limit: None,
             yaw_lower_limit: None,
-            pitch_upper_limit: Some(1f32.to_radians()),
-            pitch_lower_limit: Some(-89f32.to_radians()),
+            pitch_upper_limit: Some(89f32.to_radians()),
+            pitch_lower_limit: Some(-10f32.to_radians()),
             // Adjust sensitivity of controls
             orbit_sensitivity: 1.5,
-            pan_sensitivity: 0.0, // Disable panning
+            pan_sensitivity: 1.0, // = 0.0 Disable panning
             zoom_sensitivity: 1.0,
             // Allow the camera to go upside down
             allow_upside_down: false,
             // Set the camera's up direction to Z-up. See: https://github.com/Plonq/bevy_panorbit_camera/blob/master/examples/swapped_axis.rs
-            axis: [Vec3::X, Vec3::Z, Vec3::Y],
+            // axis: [Vec3::X, Vec3::Z, Vec3::Y],
             ..default()
         },
     ));

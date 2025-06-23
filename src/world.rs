@@ -63,9 +63,8 @@ fn spawn_world(
 
     // Floor bundle
     let floor = (
-        Mesh3d(meshes.add(Plane3d::new(Vec3::Z, Vec2::splat(HALF_PLANE_LENGTH)))),
-        MeshMaterial3d(floor_material),
-        Pickable::IGNORE, // Disable picking for the ground plane.
+        Mesh3d(meshes.add(Plane3d::new(Vec3::Y, Vec2::splat(HALF_PLANE_LENGTH)))),
+        MeshMaterial3d(floor_material)
     );
 
     commands
