@@ -14,7 +14,6 @@ impl Plugin for WorldPlugin {
             insert_ambient_light,
             spawn_world            
         ));
-        app.add_systems(PostStartup, force_init_world_transform);
     }
 }
 
@@ -85,11 +84,11 @@ fn spawn_world(
 }
 
 
-fn force_init_world_transform(
-    mut floor_q: Query<&mut Transform, With<Floor>>,
-) {
-    let mut transform = floor_q
-        .single_mut()
-        .expect("Can't get `Floor` transform");
-    *transform = Transform::IDENTITY;
-}
+// fn force_init_world_transform(
+//     mut floor_q: Query<&mut Transform, With<Floor>>,
+// ) {
+//     let mut transform = floor_q
+//         .single_mut()
+//         .expect("Can't get `Floor` transform");
+//     *transform = Transform::IDENTITY;
+// }

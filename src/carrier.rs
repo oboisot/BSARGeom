@@ -15,6 +15,7 @@ impl Plugin for CarriersPlugin {
             spawn_tx_carrier,
             spawn_rx_carrier
         ));
+        app.add_systems(Update, update_tx_carrier);
     }
 }
 
@@ -246,22 +247,6 @@ fn spawn_rx_carrier(
 }
 
 
-// /// Returns an observer that updates the entity's material to the one specified.
-// fn update_material_on<E>(
-//     new_material: Handle<StandardMaterial>,
-// ) -> impl Fn(Trigger<E>, Query<&mut MeshMaterial3d<StandardMaterial>>) {
-//     // An observer closure that captures `new_material`. We do this to avoid needing to write four
-//     // versions of this observer, each triggered by a different event and with a different hardcoded
-//     // material. Instead, the event type is a generic, and the material is passed in.
-//     move |trigger, mut query| {
-//         if let Ok(mut material) = query.get_mut(trigger.target()) {
-//             material.0 = new_material.clone();
-//         }
-//     }
-// }
-
-
-
 fn carrier_transform_from_state(
     carrier_state: &mut CarrierState,
     antenna_state: &AntennaState,
@@ -333,4 +318,19 @@ fn antenna_transform_from_state(
     );
     // Note: we don't apply ENU_TO_NED here because the antenna is already in the NED frame
     Transform::from_rotation(rotation)
+}
+
+
+fn update_tx_carrier(
+    mut tx_carrier_q: Query<(&mut Transform, &mut CarrierState), With<Tx>>,
+    tx_antenna_q: Query<&AntennaState, With<Tx>>,
+    time: Res<Time>,
+) {
+    if let Ok((mut transform, mut carrier_state)) = tx_carrier_q.single_mut() {
+        if let Ok(antenna_state) = tx_antenna_q.single() {
+            // Update carrier heading
+            carrier_state.heading_rad += 0.1 * time.delta_secs() as f64; // Rotate at 0.1 rad/s
+            *transform = carrier_transform_from_state(&mut carrier_state, &antenna_state);
+        }
+    }
 }
