@@ -15,7 +15,7 @@ impl Plugin for CarriersPlugin {
             spawn_tx_carrier,
             spawn_rx_carrier
         ));
-        app.add_systems(Update, update_tx_carrier);
+        // app.add_systems(Update, update_tx_carrier);
     }
 }
 
@@ -321,16 +321,16 @@ fn antenna_transform_from_state(
 }
 
 
-fn update_tx_carrier(
-    mut tx_carrier_q: Query<(&mut Transform, &mut CarrierState), With<Tx>>,
-    tx_antenna_q: Query<&AntennaState, With<Tx>>,
-    time: Res<Time>,
-) {
-    if let Ok((mut transform, mut carrier_state)) = tx_carrier_q.single_mut() {
-        if let Ok(antenna_state) = tx_antenna_q.single() {
-            // Update carrier heading
-            carrier_state.heading_rad += 0.1 * time.delta_secs() as f64; // Rotate at 0.1 rad/s
-            *transform = carrier_transform_from_state(&mut carrier_state, &antenna_state);
-        }
-    }
-}
+// fn update_tx_carrier(
+//     mut tx_carrier_q: Query<(&mut Transform, &mut CarrierState), With<Tx>>,
+//     tx_antenna_q: Query<&AntennaState, With<Tx>>,
+//     time: Res<Time>,
+// ) {
+//     if let Ok((mut transform, mut carrier_state)) = tx_carrier_q.single_mut() {
+//         if let Ok(antenna_state) = tx_antenna_q.single() {
+//             // Update carrier heading
+//             carrier_state.heading_rad += 0.1 * time.delta_secs() as f64; // Rotate at 0.1 rad/s
+//             *transform = carrier_transform_from_state(&mut carrier_state, &antenna_state);
+//         }
+//     }
+// }
