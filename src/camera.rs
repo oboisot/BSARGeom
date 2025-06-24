@@ -1,6 +1,9 @@
 use std::f32::consts::FRAC_PI_4;
 
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    render::view::NoIndirectDrawing
+};
 use bevy_panorbit_camera::PanOrbitCamera;
 
 pub struct CameraPlugin;
@@ -37,6 +40,8 @@ fn spawn_camera(mut commands: Commands) {
             // Set the camera's up direction to Z-up. See: https://github.com/Plonq/bevy_panorbit_camera/blob/master/examples/swapped_axis.rs
             ..default()
         },
-        Msaa::default() // Disable MSAA for performance
+        Msaa::default(), // MSAA,
+        NoIndirectDrawing, // disable indirect mode to allow correct rendering on integrated Intel GPU (see: https://github.com/bevyengine/bevy/issues/19000)
+                           // TODO: remove this when bug will be corrected/handled
     ));
 }

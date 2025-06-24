@@ -10,19 +10,19 @@ pub struct WorldPlugin;
 
 impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, (
-            insert_ambient_light,
-            spawn_world            
-        ));
+        app.add_systems(Startup, (insert_ambient_light, spawn_world));
     }
 }
 
+/// Component marker for floor plane
 #[derive(Component)]
 struct WorldFloor;
 
+/// Component marker for world grid
 #[derive(Component)]
 struct WorldGridHelper;
 
+/// Component marker for world referential
 #[derive(Component)]
 struct WorldAxesHelper;
 

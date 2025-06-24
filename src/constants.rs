@@ -5,6 +5,13 @@ use bevy::{
 };
 
 /// Geometric constants
+/// Length of the antenna beam in meters
+pub const CONE_LENGTH: f64 = 1e6;
+/// Carrier "size", i.e. length of arrows of its referential in meters
+pub const CARRIER_SIZE: f32 = 150.0; // Size of the carrier
+/// Antenna "size", i.e. length of arrows of its referential in meters
+pub const ANTENNA_SIZE: f32 = 100.0;  // Size of the antenna
+
 // pub static ENU_TO_NED_ROT: LazyLock<Quat> = LazyLock::new(|| {
 //     Quat::from_mat3(&Mat3 { // ENU -> NED rotation
 //         x_axis: Vec3::Y,
@@ -13,8 +20,8 @@ use bevy::{
 //     })
 // });
 pub const ENU_TO_NED: Quat = Quat::from_xyzw(
-    0.7071067811865476, // x = sqrt(2) / 2
-    0.7071067811865476, // y = sqrt(2) / 2
+    0.707106781186547524400844362104884, // x = sqrt(2) / 2
+    0.707106781186547524400844362104884, // y = sqrt(2) / 2
     0.0,                // z
     0.0                 // w
 );
