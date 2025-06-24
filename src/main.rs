@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 use bevy_panorbit_camera::PanOrbitCameraPlugin;
-// use bevy_inspector_egui::{
-//     bevy_egui::EguiPlugin,
-//     quick::WorldInspectorPlugin
-// };
+use bevy_inspector_egui::{
+    bevy_egui::EguiPlugin,
+    quick::WorldInspectorPlugin
+};
 
 pub mod camera;
 pub mod world;
@@ -27,8 +27,8 @@ fn main() {
                 }),
                 ..default()
             }))
-        // .add_plugins(EguiPlugin { enable_multipass_for_primary_context: true })
-        // .add_plugins(WorldInspectorPlugin::default())
+        .add_plugins(EguiPlugin { enable_multipass_for_primary_context: true })
+        .add_plugins(WorldInspectorPlugin::default())
         .add_plugins(PanOrbitCameraPlugin)
         .add_plugins(ScenePlugin)
         .run();

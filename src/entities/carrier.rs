@@ -67,7 +67,7 @@ impl AntennaState {
 
     pub fn default_rx() -> Self {
         AntennaState {
-            heading_rad: 0.0, // 0°, forward looking
+            heading_rad: std::f64::consts::FRAC_PI_4, // 0°, forward looking
             elevation_rad: -std::f64::consts::FRAC_PI_6, // 30° of depression
             bank_rad: 0.0
         }
