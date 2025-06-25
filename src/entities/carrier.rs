@@ -1,3 +1,4 @@
+use std::cmp::PartialEq;
 use bevy::{
     math::{DQuat, DVec3},
     prelude::*
@@ -9,7 +10,7 @@ use crate::{
 };
 
 // The internal state of the Carrier
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct CarrierState {
     /// Carrier orientation in World frame (NED referential)
     pub heading_rad: f64,
@@ -23,32 +24,18 @@ pub struct CarrierState {
     pub position_m: DVec3
 }
 
-impl CarrierState {
-    pub fn default_tx() -> Self {
-        CarrierState {
-            heading_rad: 0.0,
-            elevation_rad: 0.0, // -45°
-            bank_rad: 0.0,
-            height_m: 3000.0,
-            velocity_m_s: 120.0,
-            position_m: DVec3::ZERO
-         }
-    }
-
-    pub fn default_rx() -> Self {
-        CarrierState {
-            heading_rad: 0.0,
-            elevation_rad: 0.0,
-            bank_rad: 0.0,
-            height_m: 1000.0,
-            velocity_m_s: 40.0,
-            position_m: DVec3::ZERO
-         }
+impl PartialEq for CarrierState {
+    fn eq(&self, other: &Self) -> bool {
+        self.heading_rad == other.heading_rad &&
+        self.elevation_rad == other.elevation_rad &&
+        self.bank_rad == other.bank_rad &&
+        self.height_m == other.height_m &&
+        self.velocity_m_s == other.velocity_m_s
     }
 }
 
 // The internal state of the Antenna
-#[derive(Component)]
+#[derive(Component, Clone, PartialEq)]
 pub struct AntennaState {
     /// Antenna orientation relative to Carrier
     pub heading_rad: f64,
@@ -56,46 +43,11 @@ pub struct AntennaState {
     pub bank_rad: f64,
 }
 
-impl AntennaState {
-    pub fn default_tx() -> Self {
-        AntennaState {
-            heading_rad: std::f64::consts::FRAC_PI_2, // +90°, right looking
-            elevation_rad: -std::f64::consts::FRAC_PI_4, // -45° of depression
-            bank_rad: 0.0
-        }
-    }
-
-    pub fn default_rx() -> Self {
-        AntennaState {
-            heading_rad: std::f64::consts::FRAC_PI_4, // 0°, forward looking
-            elevation_rad: -std::f64::consts::FRAC_PI_6, // 30° of depression
-            bank_rad: 0.0
-        }
-    }
-}
-
-// The internal state of the Antenna
-#[derive(Component)]
+// The internal state of the Antenna 3db beamwidth
+#[derive(Component, Clone, PartialEq)]
 pub struct AntennaBeamState {
-    /// Antenna 3d beam widths
     pub elevation_beam_width_rad: f64,
     pub azimuth_beam_width_rad: f64,
-}
-
-impl AntennaBeamState {
-    pub fn default_tx() -> Self {
-        AntennaBeamState {
-            elevation_beam_width_rad: 5.0f64.to_radians(),
-            azimuth_beam_width_rad: 5.0f64.to_radians()
-        }
-    }
-
-    pub fn default_rx() -> Self {
-        AntennaBeamState {
-            elevation_beam_width_rad: 22.0f64.to_radians(),
-            azimuth_beam_width_rad: 20.0f64.to_radians()
-        }
-    }
 }
 
 pub fn spawn_carrier(
