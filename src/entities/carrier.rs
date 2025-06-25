@@ -4,7 +4,7 @@ use bevy::{
 };
 
 use crate::{
-    constants::{ANTENNA_SIZE, CONE_LENGTH, CARRIER_SIZE, ENU_TO_NED_F64, TO_Y_UP},
+    constants::{ANTENNA_SIZE, CARRIER_SIZE, CONE_LENGTH, ENU_TO_NED_F64, TO_Y_UP, NEG_YAXIS_TO_XAXIS},
     entities::{spawn_antenna_beam, spawn_axes_helper}
 };
 
@@ -242,10 +242,10 @@ pub fn antenna_beam_transform_from_state(
     let scale_elv = 2.0 * CONE_LENGTH * (
         0.5 * antenna_beam_state.elevation_beam_width_rad
     ).tan();
-    // Transform is computed with cone following Y-axis
-    Transform::from_scale(
-        Vec3::new(scale_azi as f32, 1.0, scale_elv as f32)
-    ).with_rotation(
-        Quat::from_rotation_z(std::f32::consts::FRAC_PI_2) // Rotate to align Y-axis with X-axis
-    )
+
+    Transform {
+        translation: Vec3::ZERO,
+        rotation: NEG_YAXIS_TO_XAXIS,
+        scale: Vec3::new(scale_azi as f32, 1.0, scale_elv as f32)
+    }
 }
