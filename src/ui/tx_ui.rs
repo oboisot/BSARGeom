@@ -13,7 +13,7 @@ pub fn tx_ui(
 
     egui::SidePanel::left("Transmitter")
         .resizable(false)
-        .default_width(250.0)
+        .default_width(200.0)
         .max_width(300.0)
         .show_separator_line(true)
         .show(ctx, |ui| {
@@ -32,30 +32,41 @@ pub fn tx_ui(
             ui.separator();
 
             // Carrier heading angle
-            ui.horizontal(|ui| {
-                ui.spacing_mut().slider_width = 200.0;
-                ui.add(
-                    egui::Slider::new(&mut tx_state.carrier_state.heading_rad, 0.0..=360.0)
-                        .step_by(1.0)
-                        .custom_formatter(|n, _| {
-                            format!("{:.1}°", n as f32 * 0.1)
-                        })
-                        .custom_parser(|s| {
-                            if let Ok(n) = s.parse::<f64>() {
-                                Some((n * 10.0).to_radians())
-                            } else {
-                                None
-                            }
-                        })
-                )
-                .on_hover_text("Minimum contrast percentile. Use the text editor to set tenth of %");
-            });
+            egui::Grid::new("tx_carrier_grid")
+                .num_columns(2)
+                .striped(true)
+                .spacing([10.0, 5.0])
+                .show(ui, |ui| {
+                    ui.label("Heading: ")
+                      .on_hover_text("Set the heading angle of the carrier.");
+                    ui.add(
+                        egui::Slider::new(&mut tx_state.carrier_state.heading_rad, 0.0..=360.0)
+                            .suffix("°")
+                            .custom_formatter(|n, _| format!("{:.2}", n.to_degrees()))
+                    )
+                    .on_hover_text("Set the heading angle of the carrier.");
+                    ui.end_row();
 
-            ui.label("heading");
+                    ui.label("Elevation: ")
+                      .on_hover_text("Set the elevation angle of the carrier.");
+                    ui.add(
+                        egui::Slider::new(&mut tx_state.carrier_state.elevation_rad, -90.0..=90.0)
+                            .suffix("°")
+                            .fixed_decimals(2)
+                    )
+                    .on_hover_text("Set the elevation angle of the carrier.");
+                    ui.end_row();
 
-            ui.label("elevation");
-
-            ui.label("bank");
+                    ui.label("Bank: ")
+                      .on_hover_text("Set the bank angle of the carrier.");
+                    ui.add(
+                        egui::Slider::new(&mut tx_state.carrier_state.bank_rad, -90.0..=90.0)
+                            .suffix("°")
+                            .fixed_decimals(2)
+                    )
+                    .on_hover_text("Set the bank angle of the carrier.");
+                    ui.end_row();
+                });
             
             ui.separator();
             ui.vertical_centered(|ui| ui.label(
@@ -63,9 +74,75 @@ pub fn tx_ui(
             ));
             ui.separator();
 
+            // Carrier heading angle
             ui.label("Orientation");
-
-            ui.label("Beamwidth");
             ui.separator();
+            // Antenna orientation settings
+            egui::Grid::new("tx_antenna_orientation_grid")
+                .num_columns(2)
+                .striped(true)
+                .spacing([10.0, 5.0])
+                .show(ui, |ui| {
+                    ui.label("Heading: ")
+                      .on_hover_text("Set the heading angle of the antenna.");
+                    ui.add(
+                        egui::Slider::new(&mut tx_state.antenna_state.heading_rad, -180.0..=180.0)
+                            .suffix("°")
+                            .fixed_decimals(2)
+                    )
+                    .on_hover_text("Set the heading angle of the antenna.");
+                    ui.end_row();
+
+                    ui.label("Elevation: ")
+                      .on_hover_text("Set the elevation angle of the antenna.");
+                    ui.add(
+                        egui::Slider::new(&mut tx_state.antenna_state.elevation_rad, -90.0..=90.0)
+                            .suffix("°")
+                            .fixed_decimals(2)
+                    )
+                    .on_hover_text("Set the elevation angle of the antenna.");
+                    ui.end_row();
+
+                    ui.label("Bank: ")
+                      .on_hover_text("Set the bank angle of the antenna.");
+                    ui.add(
+                        egui::Slider::new(&mut tx_state.antenna_state.bank_rad, -90.0..=90.0)
+                            .suffix("°")
+                            .fixed_decimals(2)
+                    )
+                    .on_hover_text("Set the bank angle of the antenna.");
+                    ui.end_row();
+                });
+
+            ui.label("Beamwidth (half-power)");
+            ui.separator();
+            // Antenna beamwidth settings
+            egui::Grid::new("tx_antenna_beamwidth_grid")
+                .num_columns(2)
+                .striped(true)
+                .spacing([10.0, 5.0])
+                .show(ui, |ui| {
+                    ui.label("Elevation: ")
+                      .on_hover_text("Set the elevation half-power beamwidth of the antenna.");
+                    ui.add(
+                        egui::Slider::new(&mut tx_state.antenna_beam_state.elevation_beam_width_rad, 0.0..=90.0)
+                            .suffix("°")
+                            .fixed_decimals(2)
+                    )
+                    .on_hover_text("Set the elevation half-power beamwidth of the antenna.");
+                    ui.end_row();
+
+                    ui.label("Azimuth: ")
+                      .on_hover_text("Set the azimuth half-power beamwidth of the antenna.");
+                    ui.add(
+                        egui::Slider::new(&mut tx_state.antenna_beam_state.azimuth_beam_width_rad, 0.0..=90.0)
+                            .suffix("°")
+                            .step_by(0.01)
+                            .custom_formatter(|n, _| format!("{:.2}", n.to_degrees()))
+                            .custom_parser(|s| if let Ok(s) = s.parse::<f64>() { Some(s.to_radians()) } else { None })
+                    )
+                    .on_hover_text("Set the azimuth half-power beamwidth of the antenna.");
+                    ui.end_row();
+                });
         });
 }
