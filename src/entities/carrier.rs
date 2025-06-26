@@ -1,4 +1,3 @@
-use std::cmp::PartialEq;
 use bevy::{
     math::{DQuat, DVec3},
     prelude::*
@@ -9,8 +8,20 @@ use crate::{
     entities::{spawn_antenna_beam, spawn_axes_helper}
 };
 
-// The internal state of the Carrier
-#[derive(Component, Clone)]
+/// Component marker to identify the Transmitter
+#[derive(Component)]
+pub struct Carrier;
+
+/// Component marker to identify the Antenna
+#[derive(Component)]
+pub struct Antenna;
+
+/// Component marker to identify the Antenna Beam
+#[derive(Component)]
+pub struct AntennaBeam;
+
+/// Struct to keep the internal state of the Transmitter
+#[derive(Clone)]
 pub struct CarrierState {
     /// Carrier orientation in World frame (NED referential)
     pub heading_rad: f64,
@@ -24,18 +35,8 @@ pub struct CarrierState {
     pub position_m: DVec3
 }
 
-impl PartialEq for CarrierState {
-    fn eq(&self, other: &Self) -> bool {
-        self.heading_rad == other.heading_rad &&
-        self.elevation_rad == other.elevation_rad &&
-        self.bank_rad == other.bank_rad &&
-        self.height_m == other.height_m &&
-        self.velocity_m_s == other.velocity_m_s
-    }
-}
-
-// The internal state of the Antenna
-#[derive(Component, Clone, PartialEq)]
+/// Struct to keep the internal state of the Antenna
+#[derive(Clone)]
 pub struct AntennaState {
     /// Antenna orientation relative to Carrier
     pub heading_rad: f64,
@@ -43,8 +44,8 @@ pub struct AntennaState {
     pub bank_rad: f64,
 }
 
-// The internal state of the Antenna 3db beamwidth
-#[derive(Component, Clone, PartialEq)]
+/// Struct to keep the internal state of the Antenna Beam
+#[derive(Clone)]
 pub struct AntennaBeamState {
     pub elevation_beam_width_rad: f64,
     pub azimuth_beam_width_rad: f64,
@@ -54,9 +55,9 @@ pub fn spawn_carrier(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
-    mut carrier_state: CarrierState,
-    antenna_state: AntennaState,
-    antenna_beam_state: AntennaBeamState,
+    carrier_state: &mut CarrierState,
+    antenna_state: &AntennaState,
+    antenna_beam_state: &AntennaBeamState,
     antenna_beam_material: StandardMaterial,
     name: Option<String>
 ) -> Entity {
@@ -71,8 +72,8 @@ pub fn spawn_carrier(
     );
     commands
         .entity(carrier_entity)
-        .insert(carrier_transform_from_state(&mut carrier_state, &antenna_state)) // update carrier transform
-        .insert(carrier_state)
+        .insert(carrier_transform_from_state(carrier_state, antenna_state)) // update carrier transform
+        .insert(Carrier) // Add Carrier component
         .insert(Name::new(format!("{} Carrier", name)));
 
     // Antenna
@@ -84,8 +85,8 @@ pub fn spawn_carrier(
     );
     commands
         .entity(antenna_entity)
-        .insert(antenna_transform_from_state(&antenna_state)) // Update antenna transform
-        .insert(antenna_state)
+        .insert(antenna_transform_from_state(antenna_state)) // Update antenna transform
+        .insert(Antenna) // Add Antenna component
         .insert(Name::new(format!("{} Antenna", name)));
 
     // Antenna beam
@@ -97,8 +98,8 @@ pub fn spawn_carrier(
     );
     commands
         .entity(antenna_beam_entity)
-        .insert(antenna_beam_transform_from_state(&antenna_beam_state))
-        .insert(antenna_beam_state)
+        .insert(antenna_beam_transform_from_state(antenna_beam_state))
+        .insert(AntennaBeam) // Add AntennaBeam component
         .insert(Name::new(format!("{} Antenna Beam", name)));
 
     // Concatenate entities (parent -> child): Carrier -> Antenna -> AntennaBeam

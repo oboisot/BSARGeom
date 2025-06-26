@@ -6,8 +6,10 @@ pub use axes_helper::spawn_axes_helper;
 
 mod carrier;
 pub use carrier::{
+    Antenna, AntennaBeam, Carrier,
     AntennaBeamState, AntennaState, CarrierState,
-    antenna_beam_transform_from_state, antenna_transform_from_state,
+    antenna_beam_transform_from_state,
+    antenna_transform_from_state,
     carrier_transform_from_state, spawn_carrier    
 };
 

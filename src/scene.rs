@@ -6,7 +6,7 @@ use bevy::{
 use crate::{
     camera::CameraPlugin,
     world::WorldPlugin,
-        entities::{
+    entities::{
         AntennaBeamState, AntennaState, CarrierState,
         spawn_carrier
     }
@@ -17,8 +17,12 @@ pub struct ScenePlugin;
 impl Plugin for ScenePlugin {
     fn build(&self, app: &mut App) {
         app
-            .init_resource::<TxState>()
-            .init_resource::<RxState>()
+            .init_resource::<TxCarrierState>()
+            .init_resource::<TxAntennaState>()
+            .init_resource::<TxAntennaBeamState>()
+            .init_resource::<RxCarrierState>()
+            .init_resource::<RxAntennaState>()
+            .init_resource::<RxAntennaBeamState>()
             .add_plugins((CameraPlugin, WorldPlugin))
             .add_systems(Startup, spawn_scene);
     }
@@ -26,33 +30,57 @@ impl Plugin for ScenePlugin {
 
 /// Transmitter marker component
 #[derive(Component)]
-struct Tx;
+pub struct Tx;
 
 /// Resource to keep old state of Transmitter
 #[derive(Resource)]
-pub struct TxState {
-    pub carrier_state: CarrierState,
-    pub antenna_state: AntennaState,
-    pub antenna_beam_state: AntennaBeamState
+pub struct TxCarrierState {
+    pub inner: CarrierState,
 }
 
-impl Default for TxState {
+impl Default for TxCarrierState {
     fn default() -> Self {
         Self {
-            carrier_state: CarrierState {
+            inner: CarrierState {
                 heading_rad: 0.0,
-                elevation_rad: 0.0, // -45°
+                elevation_rad: 0.0,
                 bank_rad: 0.0,
                 height_m: 3000.0,
                 velocity_m_s: 120.0,
                 position_m: DVec3::ZERO
-            },
-            antenna_state: AntennaState {
+            }
+        }
+    }
+}
+
+/// Resource to keep old state of Transmitter
+#[derive(Resource)]
+pub struct TxAntennaState {
+    pub inner: AntennaState,
+}
+
+impl Default for TxAntennaState {
+    fn default() -> Self {
+        Self {
+            inner: AntennaState {
                 heading_rad: std::f64::consts::FRAC_PI_2, // +90°, right looking
-                elevation_rad: -std::f64::consts::FRAC_PI_4, // -45° of depression
+                elevation_rad: -std::f64::consts::FRAC_PI_4, // 45° of depression
                 bank_rad: 0.0
-            },
-            antenna_beam_state: AntennaBeamState {
+            }
+        }
+    }
+}
+
+/// Resource to keep old state of Transmitter
+#[derive(Resource)]
+pub struct TxAntennaBeamState {
+    pub inner: AntennaBeamState,
+}
+
+impl Default for TxAntennaBeamState {
+    fn default() -> Self {
+        Self {
+            inner: AntennaBeamState {
                 elevation_beam_width_rad: 5.0f64.to_radians(),
                 azimuth_beam_width_rad: 5.0f64.to_radians()
             }
@@ -62,33 +90,57 @@ impl Default for TxState {
 
 /// Receiver marker component
 #[derive(Component)]
-struct Rx;
+pub struct Rx;
 
 /// Resource to keep old state of Transmitter
 #[derive(Resource)]
-pub struct RxState {
-    pub carrier_state: CarrierState,
-    pub antenna_state: AntennaState,
-    pub antenna_beam_state: AntennaBeamState
+pub struct RxCarrierState {
+    pub inner: CarrierState,
 }
 
-impl Default for RxState {
+impl Default for RxCarrierState {
     fn default() -> Self {
         Self {
-            carrier_state: CarrierState {
+            inner: CarrierState {
                 heading_rad: 0.0,
                 elevation_rad: 0.0,
                 bank_rad: 0.0,
                 height_m: 1000.0,
                 velocity_m_s: 40.0,
                 position_m: DVec3::ZERO
-            },
-            antenna_state: AntennaState {
+            }
+        }
+    }
+}
+
+/// Resource to keep old state of Transmitter
+#[derive(Resource)]
+pub struct RxAntennaState {
+    pub inner: AntennaState,
+}
+
+impl Default for RxAntennaState {
+    fn default() -> Self {
+        Self {
+            inner: AntennaState {
                 heading_rad: std::f64::consts::FRAC_PI_4, // 0°, forward looking
                 elevation_rad: -std::f64::consts::FRAC_PI_6, // 30° of depression
                 bank_rad: 0.0
-            },
-            antenna_beam_state: AntennaBeamState {
+            }
+        }
+    }
+}
+
+/// Resource to keep old state of Transmitter
+#[derive(Resource)]
+pub struct RxAntennaBeamState {
+    pub inner: AntennaBeamState,
+}
+
+impl Default for RxAntennaBeamState {
+    fn default() -> Self {
+        Self {
+            inner: AntennaBeamState {
                 elevation_beam_width_rad: 22.0f64.to_radians(),
                 azimuth_beam_width_rad: 20.0f64.to_radians()
             }
@@ -96,12 +148,13 @@ impl Default for RxState {
     }
 }
 
+
 fn spawn_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    tx_state: Res<TxState>,
-    rx_state: Res<RxState>,
+    mut tx_state: (ResMut<TxCarrierState>, Res<TxAntennaState>, Res<TxAntennaBeamState>),
+    mut rx_state: (ResMut<RxCarrierState>, Res<RxAntennaState>, Res<RxAntennaBeamState>),
 ) {
     // Tx carrier entity
     let tx_antenna_beam_material = StandardMaterial {
@@ -115,9 +168,9 @@ fn spawn_scene(
         &mut commands,
         &mut meshes,
         &mut materials,
-        tx_state.carrier_state.clone(),
-        tx_state.antenna_state.clone(),
-        tx_state.antenna_beam_state.clone(),
+        &mut tx_state.0.inner,
+        &tx_state.1.inner,
+        &tx_state.2.inner,
         tx_antenna_beam_material,
         Some("Tx".into())
     );
@@ -137,9 +190,9 @@ fn spawn_scene(
         &mut commands,
         &mut meshes,
         &mut materials,
-        rx_state.carrier_state.clone(),
-        rx_state.antenna_state.clone(),
-        rx_state.antenna_beam_state.clone(),
+        &mut rx_state.0.inner,
+        &rx_state.1.inner,
+        &rx_state.2.inner,
         rx_antenna_beam_material,
         Some("Rx".into())
     );
@@ -147,29 +200,3 @@ fn spawn_scene(
         .entity(rx_carrier_entity)
         .insert(Rx); // Add Tx Component marker to entity
 }
-
-// // see: https://github.com/bevyengine/bevy/issues/4864
-// fn update_tx_carrier(
-//     mut tx_carrier_q: Query<(&mut Transform, &mut CarrierState, &Children), With<Tx>>,
-//     tx_antenna_q: Query<(&AntennaState, &Children)>,
-//     mut tx_antenna_beam_q: Query<(&mut Transform, &mut AntennaBeamState), Without<Tx>>,
-//     time: Res<Time>,
-// ) {
-//     for (mut carrier_tranform, mut carrier_state, carrier_children) in tx_carrier_q.iter_mut() {
-//         for carrier_child in carrier_children.iter() {
-//             if let Ok((antenna_state, antenna_children)) = tx_antenna_q.get(carrier_child) {
-//                 // Update antenna beam width
-//                 for antenna_beam in antenna_children.iter() {
-//                     if let Ok((mut antenna_beam_transform, mut antenna_beam_state)) = tx_antenna_beam_q.get_mut(antenna_beam) {
-//                         antenna_beam_state.elevation_beam_width_rad += 0.1f64.to_radians();
-//                         *antenna_beam_transform = antenna_beam_transform_from_state(&antenna_beam_state);
-//                     }
-//                 }
-//                 // Update carrier heading
-//                 carrier_state.heading_rad += 0.1 * time.delta_secs() as f64; // Rotate at 0.1 rad/s
-//                 *carrier_tranform = carrier_transform_from_state(&mut carrier_state, &antenna_state);
-//             }
-            
-//         }
-//     }
-// }

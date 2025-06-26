@@ -6,7 +6,7 @@ use bevy::{
 
 /// Geometric constants
 /// Length of the antenna beam in meters
-pub const CONE_LENGTH: f64 = 1e6;
+pub const CONE_LENGTH: f64 = 1e7;
 /// Carrier "size", i.e. length of arrows of its referential in meters
 pub const CARRIER_SIZE: f32 = 150.0; // Size of the carrier
 /// Antenna "size", i.e. length of arrows of its referential in meters
@@ -97,3 +97,7 @@ pub static YELLOW_MATERIAL: LazyLock<StandardMaterial> = LazyLock::new(|| {
         ..Default::default()
     }
 });
+
+
+// UI constants
+pub const UI_STEP_RAD: f64 = 0.001f64.to_degrees(); // 0.001° -> radians
