@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   id="svg4"
+   version="1.1"
+   preserveAspectRatio="xMidYMid meet"
+   viewBox="0 0 600 600"
+   height="600"
+   width="600"
+   y="0px"
+   x="0px"
+   sodipodi:docname="menu-rx-open.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   inkscape:export-filename="menu-rx-open-48.png"
+   inkscape:export-xdpi="7.6799998"
+   inkscape:export-ydpi="7.6799998"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <sodipodi:namedview
+     id="namedview25"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="true"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="1.0229478"
+     inkscape:cx="316.7317"
+     inkscape:cy="327.97372"
+     inkscape:window-width="1854"
+     inkscape:window-height="1011"
+     inkscape:window-x="1920"
+     inkscape:window-y="32"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg4" />
+  <metadata
+     id="metadata10">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs8" />
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:200px;font-family:monospace;-inkscape-font-specification:'monospace Bold';text-align:end;text-anchor:end;fill:#ffffff;fill-opacity:1;stroke-width:50;stroke-linecap:round;stroke-linejoin:round"
+     x="484.86603"
+     y="372.89792"
+     id="text362"><tspan
+       sodipodi:role="line"
+       id="tspan360"
+       x="484.86603"
+       y="372.89792">Rx</tspan></text>
+  <path
+     id="path2"
+     d="M 188.81153,236.1878 61.187118,300 188.81153,363.8122 Z"
+     style="fill:#ffffff;fill-opacity:1;stroke:#ffffff;stroke-width:22.377;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+  <path
+     id="path819"
+     d="M 125.35606,124.9975 H 474.6441"
+     style="fill:#000000;stroke:#ffffff;stroke-width:50;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;fill-opacity:1" />
+  <path
+     id="path819-9"
+     d="M 125.35606,474.9975 H 474.6441"
+     style="fill:#000000;stroke:#ffffff;stroke-width:50;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;fill-opacity:1" />
+</svg>

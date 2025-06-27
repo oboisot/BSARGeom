@@ -46,7 +46,7 @@ impl Default for TxCarrierState {
                 elevation_rad: 0.0,
                 bank_rad: 0.0,
                 height_m: 3000.0,
-                velocity_m_s: 120.0,
+                velocity_mps: 120.0,
                 position_m: DVec3::ZERO
             }
         }
@@ -106,7 +106,7 @@ impl Default for RxCarrierState {
                 elevation_rad: 0.0,
                 bank_rad: 0.0,
                 height_m: 1000.0,
-                velocity_m_s: 40.0,
+                velocity_mps: 40.0,
                 position_m: DVec3::ZERO
             }
         }

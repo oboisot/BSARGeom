@@ -30,7 +30,7 @@ pub struct CarrierState {
     // Carrier height
     pub height_m: f64,
     // Carrier velocity
-    pub velocity_m_s: f64,
+    pub velocity_mps: f64,
     // Carrier position in World frame
     pub position_m: DVec3
 }

@@ -9,7 +9,7 @@ pub mod ui;
 pub mod world;
 
 use scene::ScenePlugin;
-use ui::UiPlugin;
+use ui::AppPlugin;
 
 fn main() {
     App::new()
@@ -18,37 +18,13 @@ fn main() {
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     position: WindowPosition::Automatic,
-                    title: "BSAR Geometry visualizer [based on RustSAR]".to_string(),
+                    title: "BSAR Geometry visualizer".to_string(),
                     ..default()
                 }),
                 ..default()
             }))    
-        .add_plugins(UiPlugin)    
+        .add_plugins(AppPlugin)    
         .add_plugins(PanOrbitCameraPlugin)
         .add_plugins(ScenePlugin)
         .run();
 }
-
-
-// fn tx_ui(
-//     mut contexts: EguiContexts,
-// ) {
-//     let ctx = contexts.ctx_mut();
-
-//     egui::SidePanel::left("Transmitter")
-//         .resizable(true)
-//         .show(ctx, |ui| {
-//             ui.separator();
-//             ui.label("CARRIER SETTINGS");
-            
-//             ui.separator();
-
-//             ui.label("ANTENNA SETTINGS");
-
-//             ui.label("Orientation");
-
-//             ui.label("Beamwidth");
-//             ui.separator();
-
-//         });
-// }

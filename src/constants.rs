@@ -98,6 +98,3 @@ pub static YELLOW_MATERIAL: LazyLock<StandardMaterial> = LazyLock::new(|| {
     }
 });
 
-
-// UI constants
-pub const UI_STEP_RAD: f64 = 0.001f64.to_degrees(); // 0.001° -> radians

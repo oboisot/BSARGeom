@@ -1,8 +1,11 @@
-mod ui_plugin;
-pub use ui_plugin::UiPlugin;
+mod app;
+pub use app::AppPlugin;
 
-mod tx_ui;
-pub use tx_ui::tx_ui;
+mod menu;
+pub use menu::{MenuPlugin, MenuWidget};
 
-mod rx_ui;
-pub use rx_ui::rx_ui;
+mod tx_panel;
+pub use tx_panel::{TxPanelPlugin, TxPanelWidget};
+
+mod rx_panel;
+pub use rx_panel::{RxPanelPlugin, RxPanelWidget};
