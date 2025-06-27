@@ -156,14 +156,15 @@ fn spawn_scene(
     mut tx_state: (ResMut<TxCarrierState>, Res<TxAntennaState>, Res<TxAntennaBeamState>),
     mut rx_state: (ResMut<RxCarrierState>, Res<RxAntennaState>, Res<RxAntennaBeamState>),
 ) {
-    // Tx carrier entity
+    // Tx antenna beam material
     let tx_antenna_beam_material = StandardMaterial {
         base_color: Color::WHITE.with_alpha(0.3),
         alpha_mode: AlphaMode::Blend,
         cull_mode: None, // Disable culling to see the beam from all sides
         unlit: true,
         ..default()
-    }; 
+    };
+    // Tx carrier entity
     let tx_carrier_entity = spawn_carrier(
         &mut commands,
         &mut meshes,
@@ -178,14 +179,15 @@ fn spawn_scene(
         .entity(tx_carrier_entity)
         .insert(Tx); // Add Tx Component marker to entity
 
-    // Rx carrier entity
+    // Rx antenna beam material
     let rx_antenna_beam_material = StandardMaterial {
         base_color: Color::BLACK.with_alpha(0.3),
         alpha_mode: AlphaMode::Blend,
         cull_mode: None, // Disable culling to see the beam from all sides
         unlit: true,
         ..default()
-    }; 
+    };
+    // Rx carrier entity
     let rx_carrier_entity = spawn_carrier(
         &mut commands,
         &mut meshes,

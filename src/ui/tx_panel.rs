@@ -5,10 +5,11 @@ use bevy_egui::egui;
 
 use crate::{
     entities::{
-        Antenna, AntennaBeam, Carrier,
+        Antenna, AntennaBeam, Carrier, VelocityVector,
         antenna_beam_transform_from_state,
         antenna_transform_from_state,
-        carrier_transform_from_state
+        carrier_transform_from_state,
+        velocity_vector_transform_from_state
     },
     scene::{Tx, TxCarrierState, TxAntennaState, TxAntennaBeamState},
 };
@@ -288,6 +289,7 @@ fn update_tx_transforms(
     mut tx_carrier_q: Query<(&mut Transform, &Children), (With<Tx>, With<Carrier>)>,
     mut tx_antenna_q: Query<(&mut Transform, &Children), (Without<Tx>, With<Antenna>)>,
     mut tx_antenna_beam_q: Query<&mut Transform, (Without<Tx>, Without<Antenna>, With<AntennaBeam>)>,
+    mut tx_velocity_vector_q: Query<&mut Transform, (Without<Tx>, Without<Antenna>, Without<AntennaBeam>, With<VelocityVector>)>,
     mut tx_carrier_state: ResMut<TxCarrierState>,
     tx_antenna_state: Res<TxAntennaState>,
     tx_antenna_beam_state: Res<TxAntennaBeamState>
@@ -315,6 +317,12 @@ fn update_tx_transforms(
                 *carrier_tranform = carrier_transform_from_state(
                     &mut tx_carrier_state.inner,
                     &tx_antenna_state.inner
+                );
+            }
+            if let Ok(mut velocity_vector_transform) = tx_velocity_vector_q.get_mut(carrier_child) {
+                // Update velocity vector transform
+                *velocity_vector_transform = velocity_vector_transform_from_state(
+                    &tx_carrier_state.inner
                 );
             }
         }

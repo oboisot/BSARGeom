@@ -5,7 +5,10 @@ use bevy::{
 
 use crate::{
     constants::{ANTENNA_SIZE, CARRIER_SIZE, CONE_LENGTH, ENU_TO_NED_F64, TO_Y_UP, NEG_YAXIS_TO_XAXIS},
-    entities::{spawn_antenna_beam, spawn_axes_helper}
+    entities::{
+        spawn_antenna_beam, spawn_axes_helper, spawn_velocity_vector,
+        velocity_vector_transform_from_state
+    }
 };
 
 /// Component marker to identify the Transmitter
@@ -19,6 +22,10 @@ pub struct Antenna;
 /// Component marker to identify the Antenna Beam
 #[derive(Component)]
 pub struct AntennaBeam;
+
+/// Component marker to identify the Velocity Vector entity.
+#[derive(Component)]
+pub struct VelocityVector;
 
 /// Struct to keep the internal state of the Transmitter
 #[derive(Clone)]
@@ -102,13 +109,25 @@ pub fn spawn_carrier(
         .insert(AntennaBeam) // Add AntennaBeam component
         .insert(Name::new(format!("{} Antenna Beam", name)));
 
+    // Velocity vector
+    let velocity_vector_entity = spawn_velocity_vector(
+        commands,
+        meshes,
+        materials
+    );
+    commands
+        .entity(velocity_vector_entity)
+        .insert(velocity_vector_transform_from_state(carrier_state)) // Update velocity vector transform
+        .insert(VelocityVector) // Add VelocityVector component
+        .insert(Name::new(format!("{} Velocity Vector", name)));
+
     // Concatenate entities (parent -> child): Carrier -> Antenna -> AntennaBeam
     commands // Adds antenna beam as child of antenna entity
         .entity(antenna_entity)
         .add_child(antenna_beam_entity);    
-    commands // Adds antenna beam as child of carrier entity
+    commands // Adds antenna and velocity vector as children of carrier entity
         .entity(carrier_entity)
-        .add_child(antenna_entity)
+        .add_children(&[antenna_entity, velocity_vector_entity])
         .id()
 }
 

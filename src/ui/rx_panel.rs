@@ -5,10 +5,11 @@ use bevy_egui::egui;
 
 use crate::{
     entities::{
-        Antenna, AntennaBeam, Carrier,
+        Antenna, AntennaBeam, Carrier, VelocityVector,
         antenna_beam_transform_from_state,
         antenna_transform_from_state,
-        carrier_transform_from_state
+        carrier_transform_from_state,
+        velocity_vector_transform_from_state
     },
     scene::{Rx, RxCarrierState, RxAntennaState, RxAntennaBeamState},
 };
@@ -284,23 +285,24 @@ impl RxPanelWidget {
 
 // see: https://github.com/bevyengine/bevy/issues/4864
 fn update_rx_transforms(
-    tx_panel_widget: Res<RxPanelWidget>,
-    mut tx_carrier_q: Query<(&mut Transform, &Children), (With<Rx>, With<Carrier>)>,
-    mut tx_antenna_q: Query<(&mut Transform, &Children), (Without<Rx>, With<Antenna>)>,
-    mut tx_antenna_beam_q: Query<&mut Transform, (Without<Rx>, Without<Antenna>, With<AntennaBeam>)>,
+    rx_panel_widget: Res<RxPanelWidget>,
+    mut rx_carrier_q: Query<(&mut Transform, &Children), (With<Rx>, With<Carrier>)>,
+    mut rx_antenna_q: Query<(&mut Transform, &Children), (Without<Rx>, With<Antenna>)>,
+    mut rx_antenna_beam_q: Query<&mut Transform, (Without<Rx>, Without<Antenna>, With<AntennaBeam>)>,
+    mut rx_velocity_vector_q: Query<&mut Transform, (Without<Rx>, Without<Antenna>, Without<AntennaBeam>, With<VelocityVector>)>,
     mut rx_carrier_state: ResMut<RxCarrierState>,
     rx_antenna_state: Res<RxAntennaState>,
     rx_antenna_beam_state: Res<RxAntennaBeamState>
 ) {
-    if !tx_panel_widget.transform_needs_update {
+    if !rx_panel_widget.transform_needs_update {
         return; // No need to update transforms if no changes were made
     }
-    for (mut carrier_tranform, carrier_children) in tx_carrier_q.iter_mut() {
+    for (mut carrier_tranform, carrier_children) in rx_carrier_q.iter_mut() {
         for carrier_child in carrier_children.iter() {
-            if let Ok((mut antenna_transform, antenna_children)) = tx_antenna_q.get_mut(carrier_child) {
+            if let Ok((mut antenna_transform, antenna_children)) = rx_antenna_q.get_mut(carrier_child) {
                 // Update antenna beam width
                 for antenna_beam in antenna_children.iter() {
-                    if let Ok(mut antenna_beam_transform) = tx_antenna_beam_q.get_mut(antenna_beam) {
+                    if let Ok(mut antenna_beam_transform) = rx_antenna_beam_q.get_mut(antenna_beam) {
                         // Update antenna beam width
                         *antenna_beam_transform = antenna_beam_transform_from_state(
                             &rx_antenna_beam_state.inner
@@ -315,6 +317,12 @@ fn update_rx_transforms(
                 *carrier_tranform = carrier_transform_from_state(
                     &mut rx_carrier_state.inner,
                     &rx_antenna_state.inner
+                );
+            }
+            if let Ok(mut velocity_vector_transform) = rx_velocity_vector_q.get_mut(carrier_child) {
+                // Update velocity vector transform
+                *velocity_vector_transform = velocity_vector_transform_from_state(
+                    &rx_carrier_state.inner
                 );
             }
         }

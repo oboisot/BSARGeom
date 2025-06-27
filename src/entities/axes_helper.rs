@@ -1,9 +1,11 @@
+use std::f32::consts::FRAC_PI_2;
 use bevy::prelude::*;
 use bevy::render::mesh::{ConeAnchor, ConeMeshBuilder, CylinderAnchor, CylinderMeshBuilder};
 
-use std::f32::consts::FRAC_PI_2;
-
-use crate::constants::{BLUE_MATERIAL, GREEN_MATERIAL, RED_MATERIAL, YELLOW_MATERIAL, TRANSFORM_TO_Y_UP};
+use crate::constants::{
+    BLUE_MATERIAL, GREEN_MATERIAL, RED_MATERIAL, YELLOW_MATERIAL,
+    POS_YAXIS_TO_XAXIS, TRANSFORM_TO_Y_UP
+};
 
 // https://users.rust-lang.org/t/solved-placement-of-mut-in-function-parameters/19891
 pub fn spawn_axes_helper(
@@ -36,9 +38,7 @@ pub fn spawn_axes_helper(
     let xaxis = commands.spawn(( // base
         Mesh3d(meshes.add(cylinder_mesh)),
         MeshMaterial3d(materials.add(RED_MATERIAL.clone())),
-        Transform::from_rotation(
-            Quat::from_rotation_z(-FRAC_PI_2) // Rotate to align with X-axis
-        )
+        Transform::from_rotation(POS_YAXIS_TO_XAXIS) // Rotate to align with X-axis
     )).with_child(( // arrow
         Mesh3d(meshes.add(cone_mesh)),
         MeshMaterial3d(materials.add(RED_MATERIAL.clone())),

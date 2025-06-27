@@ -61,6 +61,14 @@ pub const NEG_YAXIS_TO_XAXIS: Quat = Quat::from_xyzw( // = Quat::from_rotation_z
     0.707106781186547524400844362104884  // w = sqrt(2) / 2 = cos((pi/2)/2)
 );
 
+/// Rotation to align positive Y-axis with X-axis
+pub const POS_YAXIS_TO_XAXIS: Quat = Quat::from_xyzw( // = Quat::from_rotation_z(-FRAC_PI_2)
+    0.0,
+    0.0,
+    -0.707106781186547524400844362104884, // z = -sqrt(2) / 2 = sin((-pi/2)/2)
+    0.707106781186547524400844362104884   // w = sqrt(2) / 2 = cos((-pi/2)/2)
+);
+
 // Default materials
 pub static RED_MATERIAL: LazyLock<StandardMaterial> = LazyLock::new(|| {
     StandardMaterial {

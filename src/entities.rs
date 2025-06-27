@@ -6,7 +6,7 @@ pub use axes_helper::spawn_axes_helper;
 
 mod carrier;
 pub use carrier::{
-    Antenna, AntennaBeam, Carrier,
+    Antenna, AntennaBeam, Carrier, VelocityVector,
     AntennaBeamState, AntennaState, CarrierState,
     antenna_beam_transform_from_state,
     antenna_transform_from_state,
@@ -18,3 +18,6 @@ pub use grid_helper::spawn_grid_helper;
 
 mod lines;
 pub use lines::{LineList, LineStrip};
+
+mod velocity_vector;
+pub use velocity_vector::{spawn_velocity_vector, velocity_vector_transform_from_state};
