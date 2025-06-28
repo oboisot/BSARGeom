@@ -4,12 +4,13 @@ use bevy::prelude::*;
 use bevy_egui::egui;
 
 use crate::{
+    constants::{MAX_HEIGHT_M, MAX_VELOCITY_MPS},
     entities::{
         Antenna, AntennaBeam, Carrier, VelocityVector,
         antenna_beam_transform_from_state,
         antenna_transform_from_state,
         carrier_transform_from_state,
-        velocity_vector_transform_from_state
+        velocity_indicator_transform_from_state
     },
     scene::{Tx, TxCarrierState, TxAntennaState, TxAntennaBeamState},
 };
@@ -79,7 +80,7 @@ impl TxPanelWidget {
                 ui.add(
                     egui::DragValue::new(&mut tx_carrier_state.inner.height_m)
                         .speed(10.0)
-                        .range(0.0..=1e6)
+                        .range(0.0..=MAX_HEIGHT_M)
                         .fixed_decimals(3)
                         .suffix(" m")
                 ).on_hover_text(hover_text);
@@ -97,7 +98,7 @@ impl TxPanelWidget {
                 ui.add(
                     egui::DragValue::new(&mut tx_carrier_state.inner.velocity_mps)
                         .speed(10.0)
-                        .range(0.0..=50_000.0)
+                        .range(0.0..=MAX_VELOCITY_MPS)
                         .fixed_decimals(3)
                         .suffix(" m/s")
                 ).on_hover_text(hover_text);
@@ -289,7 +290,7 @@ fn update_tx_transforms(
     mut tx_carrier_q: Query<(&mut Transform, &Children), (With<Tx>, With<Carrier>)>,
     mut tx_antenna_q: Query<(&mut Transform, &Children), (Without<Tx>, With<Antenna>)>,
     mut tx_antenna_beam_q: Query<&mut Transform, (Without<Tx>, Without<Antenna>, With<AntennaBeam>)>,
-    mut tx_velocity_vector_q: Query<&mut Transform, (Without<Tx>, Without<Antenna>, Without<AntennaBeam>, With<VelocityVector>)>,
+    mut tx_velocity_indicator_q: Query<&mut Transform, (Without<Tx>, Without<Antenna>, Without<AntennaBeam>, With<VelocityVector>)>,
     mut tx_carrier_state: ResMut<TxCarrierState>,
     tx_antenna_state: Res<TxAntennaState>,
     tx_antenna_beam_state: Res<TxAntennaBeamState>
@@ -319,9 +320,9 @@ fn update_tx_transforms(
                     &tx_antenna_state.inner
                 );
             }
-            if let Ok(mut velocity_vector_transform) = tx_velocity_vector_q.get_mut(carrier_child) {
+            if let Ok(mut velocity_indicator_transform) = tx_velocity_indicator_q.get_mut(carrier_child) {
                 // Update velocity vector transform
-                *velocity_vector_transform = velocity_vector_transform_from_state(
+                *velocity_indicator_transform = velocity_indicator_transform_from_state(
                     &tx_carrier_state.inner
                 );
             }

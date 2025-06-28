@@ -106,3 +106,8 @@ pub static YELLOW_MATERIAL: LazyLock<StandardMaterial> = LazyLock::new(|| {
     }
 });
 
+/// UI constants
+/// Maximum height in meters for the carrier
+pub const MAX_HEIGHT_M: f64 = 1e6;
+/// Maximum velocity in m/s for the velocity vector
+pub const MAX_VELOCITY_MPS: f64 = 10_000.0;

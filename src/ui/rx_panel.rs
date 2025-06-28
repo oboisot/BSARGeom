@@ -4,14 +4,10 @@ use bevy::prelude::*;
 use bevy_egui::egui;
 
 use crate::{
+    constants::{MAX_HEIGHT_M, MAX_VELOCITY_MPS},
     entities::{
-        Antenna, AntennaBeam, Carrier, VelocityVector,
-        antenna_beam_transform_from_state,
-        antenna_transform_from_state,
-        carrier_transform_from_state,
-        velocity_vector_transform_from_state
-    },
-    scene::{Rx, RxCarrierState, RxAntennaState, RxAntennaBeamState},
+        antenna_beam_transform_from_state, antenna_transform_from_state, carrier_transform_from_state, velocity_indicator_transform_from_state, Antenna, AntennaBeam, Carrier, VelocityVector
+    }, scene::{Rx, RxAntennaBeamState, RxAntennaState, RxCarrierState}
 };
 
 pub struct RxPanelPlugin;
@@ -79,7 +75,7 @@ impl RxPanelWidget {
                 ui.add(
                     egui::DragValue::new(&mut rx_carrier_state.inner.height_m)
                         .speed(10.0)
-                        .range(0.0..=1e6)
+                        .range(0.0..=MAX_HEIGHT_M)
                         .fixed_decimals(3)
                         .suffix(" m")
                 ).on_hover_text(hover_text);
@@ -97,7 +93,7 @@ impl RxPanelWidget {
                 ui.add(
                     egui::DragValue::new(&mut rx_carrier_state.inner.velocity_mps)
                         .speed(10.0)
-                        .range(0.0..=50_000.0)
+                        .range(0.0..=MAX_VELOCITY_MPS)
                         .fixed_decimals(3)
                         .suffix(" m/s")
                 ).on_hover_text(hover_text);
@@ -289,7 +285,7 @@ fn update_rx_transforms(
     mut rx_carrier_q: Query<(&mut Transform, &Children), (With<Rx>, With<Carrier>)>,
     mut rx_antenna_q: Query<(&mut Transform, &Children), (Without<Rx>, With<Antenna>)>,
     mut rx_antenna_beam_q: Query<&mut Transform, (Without<Rx>, Without<Antenna>, With<AntennaBeam>)>,
-    mut rx_velocity_vector_q: Query<&mut Transform, (Without<Rx>, Without<Antenna>, Without<AntennaBeam>, With<VelocityVector>)>,
+    mut rx_velocity_indicator_q: Query<&mut Transform, (Without<Rx>, Without<Antenna>, Without<AntennaBeam>, With<VelocityVector>)>,
     mut rx_carrier_state: ResMut<RxCarrierState>,
     rx_antenna_state: Res<RxAntennaState>,
     rx_antenna_beam_state: Res<RxAntennaBeamState>
@@ -319,9 +315,9 @@ fn update_rx_transforms(
                     &rx_antenna_state.inner
                 );
             }
-            if let Ok(mut velocity_vector_transform) = rx_velocity_vector_q.get_mut(carrier_child) {
+            if let Ok(mut velocity_indicator_transform) = rx_velocity_indicator_q.get_mut(carrier_child) {
                 // Update velocity vector transform
-                *velocity_vector_transform = velocity_vector_transform_from_state(
+                *velocity_indicator_transform = velocity_indicator_transform_from_state(
                     &rx_carrier_state.inner
                 );
             }

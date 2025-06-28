@@ -19,5 +19,5 @@ pub use grid_helper::spawn_grid_helper;
 mod lines;
 pub use lines::{LineList, LineStrip};
 
-mod velocity_vector;
-pub use velocity_vector::{spawn_velocity_vector, velocity_vector_transform_from_state};
+mod velocity_indicator;
+pub use velocity_indicator::{spawn_velocity_indicator, velocity_indicator_transform_from_state};
