@@ -4,14 +4,14 @@ use bevy::{
 };
 
 use crate::{
-    constants::{ANTENNA_SIZE, CARRIER_SIZE, CONE_LENGTH, ENU_TO_NED_F64, TO_Y_UP, NEG_YAXIS_TO_XAXIS},
-    entities::{
-        spawn_antenna_beam, spawn_axes_helper, spawn_velocity_indicator,
-        velocity_indicator_transform_from_state
-    }
+    constants::{
+        ANTENNA_SIZE, CARRIER_SIZE, CONE_LENGTH,
+        ENU_TO_NED_F64, NEG_YAXIS_TO_XAXIS, POS_YAXIS_TO_XAXIS, TO_Y_UP
+    },
+    entities::{spawn_antenna_beam, spawn_axes_helper, spawn_velocity_indicator}
 };
 
-/// Component marker to identify the Transmitter
+/// Component marker to identify the Carrier
 #[derive(Component)]
 pub struct Carrier;
 
@@ -22,6 +22,10 @@ pub struct Antenna;
 /// Component marker to identify the Antenna Beam
 #[derive(Component)]
 pub struct AntennaBeam;
+
+/// Component marker to identify the Antenna Beam footprint.
+#[derive(Component)]
+pub struct AntennaBeamFootprint;
 
 /// Component marker to identify the Velocity Vector entity.
 #[derive(Component)]
@@ -137,25 +141,26 @@ pub fn carrier_transform_from_state(
     carrier_state: &mut CarrierState,
     antenna_state: &AntennaState,
 ) -> Transform {
+    // Carrier position in World frame
+    // We compute the intersection of Carrier at position (0, 0, height_m) with antenna pointing direction
+    // with the ground plane (z = 0) then we apply the inverse translation to get the position
+    // of the carrier in the World frame.
+
     // Carrier rotation from ENU to NED frame + orientation
     let carrier_rotation = ENU_TO_NED_F64 * DQuat::from_euler(
         EulerRot::ZYX,
         carrier_state.heading_rad,
         carrier_state.elevation_rad,
         carrier_state.bank_rad
-    );
-
-    // Carrier position in World frame
-    // We compute the intersection of Carrier at position (0, 0, height_m) with antenna pointing direction
-    // with the ground plane (z = 0) then we apply the inverse translation to get the position
-    // of the carrier in the World frame.
-    // Antenna pointing direction
+    );    
+    // Antenna rotation relative to Carrier
     let antenna_rotation = DQuat::from_euler(
         EulerRot::ZYX,
         antenna_state.heading_rad,
         antenna_state.elevation_rad,
         antenna_state.bank_rad
     );
+    // Antenna pointing direction
     let ax = (
         carrier_rotation *
         antenna_rotation *
@@ -221,5 +226,28 @@ pub fn antenna_beam_transform_from_state(
         translation: Vec3::ZERO,
         rotation: NEG_YAXIS_TO_XAXIS,
         scale: Vec3::new(scale_azi as f32, 1.0, scale_elv as f32)
+    }
+}
+
+/// Computes velocity indicator transform from the carrier state.
+pub fn velocity_indicator_transform_from_state(
+    carrier_state: &CarrierState
+) -> Transform {
+    let x = carrier_state.velocity_mps;
+    if x <= 150.0 { // = CARRIER_SIZE
+        let length = 150.0 * x.ln_1p() / 150.0f64.ln_1p() ;// logarithmic growth: F(x) = ymax * ln(1 + x) / ln(1 + xmax)
+        Transform {
+            translation: Vec3::ZERO,
+            rotation: POS_YAXIS_TO_XAXIS, // Rotate to align with X-axis
+            scale: Vec3::new(1.0, length as f32, 1.0)
+        }
+    } else {
+        let length = 0.08542713567839195 * (x - 150.0) + 150.0; // linear growth (note max length for vmax=10_000m/s is 1000.0)
+        let scale = 0.00047058823529411766 * x + 1.0294117647058825; // linear growth of the cylinder radius
+        Transform {
+            translation: Vec3::ZERO,
+            rotation: POS_YAXIS_TO_XAXIS, // Rotate to align with X-axis
+            scale: Vec3::new(scale as f32, length as f32, scale as f32)
+        }
     }
 }

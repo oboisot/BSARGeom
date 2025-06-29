@@ -10,7 +10,8 @@ pub use carrier::{
     AntennaBeamState, AntennaState, CarrierState,
     antenna_beam_transform_from_state,
     antenna_transform_from_state,
-    carrier_transform_from_state, spawn_carrier    
+    carrier_transform_from_state, spawn_carrier,
+    velocity_indicator_transform_from_state
 };
 
 mod grid_helper;
@@ -20,4 +21,4 @@ mod lines;
 pub use lines::{LineList, LineStrip};
 
 mod velocity_indicator;
-pub use velocity_indicator::{spawn_velocity_indicator, velocity_indicator_transform_from_state};
+pub use velocity_indicator::spawn_velocity_indicator;

@@ -19,9 +19,6 @@ pub const ENU_TO_NED: Quat = Quat::from_xyzw(
     0.0,                // z
     0.0                 // w
 );
-
-pub const NED_TO_ENU: Quat = ENU_TO_NED;
-
 /// ENU to NED rotation quaternion but with f64 accuracy
 pub const ENU_TO_NED_F64: DQuat = DQuat::from_xyzw(
     0.707106781186547524400844362104884, // x = sqrt(2) / 2

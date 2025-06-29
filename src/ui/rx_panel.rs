@@ -16,19 +16,21 @@ impl Plugin for RxPanelPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<RxPanelWidget>()
-            .add_systems(Update, update_rx_transforms);
+            .add_systems(Update, update_rx);
     }
 }
 
 #[derive(Resource)]
 pub struct RxPanelWidget {
     pub transform_needs_update: bool,
+    pub velocity_indicator_needs_update: bool,
 }
 
 impl Default for RxPanelWidget {
     fn default() -> Self {
         Self {
             transform_needs_update: false,
+            velocity_indicator_needs_update: false,
         }
     }
 }
@@ -43,7 +45,7 @@ impl RxPanelWidget {
     ) {
         
         self.transform_needs_update = false;
-
+        self.velocity_indicator_needs_update = false;
         let mut old_state = 0.0f64;
 
         ui.separator();
@@ -84,7 +86,7 @@ impl RxPanelWidget {
                 }
                 ui.end_row();
 
-                // ***** Carrier veolcity ***** //
+                // ***** Carrier velocity ***** //
                 let hover_text = egui::RichText::new("Sets the Carrier's velocity")
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
@@ -98,7 +100,7 @@ impl RxPanelWidget {
                         .suffix(" m/s")
                 ).on_hover_text(hover_text);
                 if old_state != rx_carrier_state.inner.velocity_mps {
-                    self.transform_needs_update = true;
+                    self.velocity_indicator_needs_update = true;
                 }
                 ui.end_row();
 
@@ -280,7 +282,7 @@ impl RxPanelWidget {
 }
 
 // see: https://github.com/bevyengine/bevy/issues/4864
-fn update_rx_transforms(
+fn update_rx(
     rx_panel_widget: Res<RxPanelWidget>,
     mut rx_carrier_q: Query<(&mut Transform, &Children), (With<Rx>, With<Carrier>)>,
     mut rx_antenna_q: Query<(&mut Transform, &Children), (Without<Rx>, With<Antenna>)>,
@@ -290,36 +292,41 @@ fn update_rx_transforms(
     rx_antenna_state: Res<RxAntennaState>,
     rx_antenna_beam_state: Res<RxAntennaBeamState>
 ) {
-    if !rx_panel_widget.transform_needs_update {
+    if !(rx_panel_widget.transform_needs_update  ||
+         rx_panel_widget.velocity_indicator_needs_update) {
         return; // No need to update transforms if no changes were made
     }
     for (mut carrier_tranform, carrier_children) in rx_carrier_q.iter_mut() {
         for carrier_child in carrier_children.iter() {
-            if let Ok((mut antenna_transform, antenna_children)) = rx_antenna_q.get_mut(carrier_child) {
-                // Update antenna beam width
-                for antenna_beam in antenna_children.iter() {
-                    if let Ok(mut antenna_beam_transform) = rx_antenna_beam_q.get_mut(antenna_beam) {
-                        // Update antenna beam width
-                        *antenna_beam_transform = antenna_beam_transform_from_state(
-                            &rx_antenna_beam_state.inner
-                        );
+            if rx_panel_widget.transform_needs_update {
+                if let Ok((mut antenna_transform, antenna_children)) = rx_antenna_q.get_mut(carrier_child) {
+                    // Update antenna beam width
+                    for antenna_beam in antenna_children.iter() {
+                        if let Ok(mut antenna_beam_transform) = rx_antenna_beam_q.get_mut(antenna_beam) {
+                            // Update antenna beam width
+                            *antenna_beam_transform = antenna_beam_transform_from_state(
+                                &rx_antenna_beam_state.inner
+                            );
+                        }
                     }
+                    // Update antenna transform
+                    *antenna_transform = antenna_transform_from_state(
+                        &rx_antenna_state.inner
+                    );
+                    // Update carrier transform                
+                    *carrier_tranform = carrier_transform_from_state(
+                        &mut rx_carrier_state.inner,
+                        &rx_antenna_state.inner
+                    );
                 }
-                // Update antenna transform
-                *antenna_transform = antenna_transform_from_state(
-                    &rx_antenna_state.inner
-                );
-                // Update carrier transform                
-                *carrier_tranform = carrier_transform_from_state(
-                    &mut rx_carrier_state.inner,
-                    &rx_antenna_state.inner
-                );
             }
-            if let Ok(mut velocity_indicator_transform) = rx_velocity_indicator_q.get_mut(carrier_child) {
-                // Update velocity vector transform
-                *velocity_indicator_transform = velocity_indicator_transform_from_state(
-                    &rx_carrier_state.inner
-                );
+            if rx_panel_widget.velocity_indicator_needs_update {
+                if let Ok(mut velocity_indicator_transform) = rx_velocity_indicator_q.get_mut(carrier_child) {
+                    // Update velocity vector transform
+                    *velocity_indicator_transform = velocity_indicator_transform_from_state(
+                        &rx_carrier_state.inner
+                    );
+                }
             }
         }
     }
