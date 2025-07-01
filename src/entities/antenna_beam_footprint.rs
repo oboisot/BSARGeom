@@ -1,38 +1,38 @@
-
 use std::f64::consts::TAU;
+use bevy::{
+    prelude::*,
+    math::{DQuat, DVec3}
+};
+
+
+use crate::{
+    constants::ENU_TO_NED_F64,
+    entities::{AntennaState, AntennaBeamState, CarrierState}
+};
 
 const ANTENNA_BEAM_FOOTPRINT_SIZE: usize = 2501; // Size of the antenna beam footprint mesh
-const STEP_THETA: f64 = TAU / (ANTENNA_BEAM_FOOTPRINT_SIZE - 1); // Step size for the antenna beam footprint mesh
+const STEP_THETA: f64 = TAU / (ANTENNA_BEAM_FOOTPRINT_SIZE - 1) as f64; // Step size for the antenna beam footprint mesh
 
 /// Resource to keep old state of Transmitter
 #[derive(Resource)]
 pub struct TxAntennaBeamFootprintState {
-    pub inner: AntennaBeamFootprintState,
+    pub points: Vec<DVec3>
 }
 
 impl Default for TxAntennaBeamFootprintState {
     fn default() -> Self {
         Self {
-            inner: AntennaBeamFootprintState {
-                points: vec![DVec3::ZERO; ANTENNA_BEAM_FOOTPRINT_SIZE], // Preallocate points for the antenna beam footprint
-            }
+            points: vec![DVec3::ZERO; ANTENNA_BEAM_FOOTPRINT_SIZE] // Preallocate points for the antenna beam footprint
         }
     }
 }
 
-impl TxAntennaBeamFootprintState {
-    pub fn update_meshes(&mut self, meshes: &mut ResMut<Assets<Mesh>>) {
-        // Create a new mesh for the antenna beam footprint
-        let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, self.inner.points.clone());
-        mesh.set_indices(Some(Indices::U32((0..ANTENNA_BEAM_FOOTPRINT_SIZE as u32).collect())));
-        meshes.set_untracked(MeshId::new(), mesh);
-
-    }
-}
-pub fn antenna_beam_footprint_mesh_from_state(
+pub fn update_antenna_beam_footprint_mesh_from_state(
     carrier_state: &CarrierState,
     antenna_state: &AntennaState,
+    antenna_beam_state: &AntennaBeamState,
+    points: &mut Vec<DVec3>,
+    meshes: &mut ResMut<Assets<Mesh>>,
 )  {
     // Rotation to transform ground plane origin and normal into Antena referential
     // World to Antenna: R = R_enu_to_ned * R_carrier * R_antenna
@@ -58,18 +58,16 @@ pub fn antenna_beam_footprint_mesh_from_state(
     let n = rot * DVec3::Z; // Normal vector of the ground plane in Antenna referential
     let o = rot * carrier_state.position_m; // Origin of the ground plane in Antenna referential
     let d =  n.dot(o); // Distance from the origin to the ground plane in Antenna referential
-    let ty = (0.5 * antenna_state.azimuth_beam_width_rad).tan(); // Half of the azimuth beam width in radians
-    let tz = (0.5 * antenna_state.elevation_beam_width_rad).tan(); // Half of the elevation beam width in radians
+    let ty = (0.5 * antenna_beam_state.azimuth_beam_width_rad).tan(); // Half of the azimuth beam width in radians
+    let tz = (0.5 * antenna_beam_state.elevation_beam_width_rad).tan(); // Half of the elevation beam width in radians
     let nyty = n.y * ty; // Normal vector component in the Y direction scaled by the azimuth beam width
     let nztz = n.z * tz; // Normal vector component in the Z direction
-
-    // let mut points = Vec::with_capacity(ANTENNA_BEAM_FOOTPRINT_SIZE);
-    let mut points = vec![DVec3::ZERO; ANTENNA_BEAM_FOOTPRINT_SIZE]; // Preallocate points for the antenna beam footprint
+    // 
     let (mut s, mut c): (f64, f64); // (sin(theta), cos(theta))
-    for i in 0..ANTENNA_BEAM_FOOTPRINT_SIZE {
+    for (i, point) in points.iter_mut().enumerate() {
         (s, c) = (i as f64 * STEP_THETA).sin_cos(); // Angle in radians
-        points.x = d / (n.x + nyty * c + nztz * s);
-        points.y = ty * c * points.x;
-        points.z = tz * s * points.x;
+        point.x = d / (n.x + nyty * c + nztz * s);
+        point.y = ty * c * point.x;
+        point.z = tz * s * point.x;
     }
 }
