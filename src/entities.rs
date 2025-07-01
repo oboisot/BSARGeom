@@ -2,13 +2,18 @@ mod antenna_beam;
 pub use antenna_beam::spawn_antenna_beam;
 
 mod antenna_beam_footprint;
+pub use antenna_beam_footprint::{
+    AntennaBeamFootprintState,
+    spawn_antenna_beam_footprint,
+    update_antenna_beam_footprint_mesh_from_state
+};
 
 mod axes_helper;
 pub use axes_helper::spawn_axes_helper;
 
 mod carrier;
 pub use carrier::{
-    Antenna, AntennaBeam, Carrier, VelocityVector,
+    Antenna, AntennaBeam, AntennaBeamFootprint, Carrier, VelocityVector,
     AntennaBeamState, AntennaState, CarrierState,
     antenna_beam_transform_from_state,
     antenna_transform_from_state,

@@ -7,7 +7,7 @@ use crate::{
     camera::CameraPlugin,
     world::WorldPlugin,
     entities::{
-        AntennaBeamState, AntennaState, CarrierState,
+        AntennaBeamState, AntennaBeamFootprintState, AntennaState, CarrierState,
         spawn_carrier
     }
 };
@@ -20,9 +20,11 @@ impl Plugin for ScenePlugin {
             .init_resource::<TxCarrierState>()
             .init_resource::<TxAntennaState>()
             .init_resource::<TxAntennaBeamState>()
+            .init_resource::<TxAntennaBeamFootprintState>()
             .init_resource::<RxCarrierState>()
             .init_resource::<RxAntennaState>()
             .init_resource::<RxAntennaBeamState>()
+            .init_resource::<RxAntennaBeamFootprintState>()
             .add_plugins((CameraPlugin, WorldPlugin))
             .add_systems(Startup, spawn_scene);
     }
@@ -71,7 +73,7 @@ impl Default for TxAntennaState {
     }
 }
 
-/// Resource to keep old state of Transmitter
+/// Resource to keep old state of Transmitter Antenna Beam
 #[derive(Resource)]
 pub struct TxAntennaBeamState {
     pub inner: AntennaBeamState,
@@ -84,6 +86,20 @@ impl Default for TxAntennaBeamState {
                 elevation_beam_width_rad: 5.0f64.to_radians(),
                 azimuth_beam_width_rad: 5.0f64.to_radians()
             }
+        }
+    }
+}
+
+/// Resource to keep old state of Transmitter Antenna Beam Footprint
+#[derive(Resource)]
+pub struct TxAntennaBeamFootprintState {
+    pub inner: AntennaBeamFootprintState
+}
+
+impl Default for TxAntennaBeamFootprintState {
+    fn default() -> Self {
+        Self {
+            inner: AntennaBeamFootprintState::default()
         }
     }
 }
@@ -148,18 +164,40 @@ impl Default for RxAntennaBeamState {
     }
 }
 
+/// Resource to keep old state of Transmitter Antenna Beam Footprint
+#[derive(Resource)]
+pub struct RxAntennaBeamFootprintState {
+    pub inner: AntennaBeamFootprintState
+}
+
+impl Default for RxAntennaBeamFootprintState {
+    fn default() -> Self {
+        Self {
+            inner: AntennaBeamFootprintState::default()
+        }
+    }
+}
+
 
 fn spawn_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut tx_state: (ResMut<TxCarrierState>, Res<TxAntennaState>, Res<TxAntennaBeamState>),
-    mut rx_state: (ResMut<RxCarrierState>, Res<RxAntennaState>, Res<RxAntennaBeamState>),
+    mut tx_state: (ResMut<TxCarrierState>, Res<TxAntennaState>, Res<TxAntennaBeamState>, ResMut<TxAntennaBeamFootprintState>),
+    mut rx_state: (ResMut<RxCarrierState>, Res<RxAntennaState>, Res<RxAntennaBeamState>, ResMut<RxAntennaBeamFootprintState>),
 ) {
     // Tx antenna beam material
     let tx_antenna_beam_material = StandardMaterial {
         base_color: Color::WHITE.with_alpha(0.3),
         alpha_mode: AlphaMode::Blend,
+        cull_mode: None, // Disable culling to see the beam from all sides
+        unlit: true,
+        ..default()
+    };
+    // Tx antenna beam footprint material
+    let tx_antenna_beam_footprint_material = StandardMaterial {
+        base_color: Color::WHITE,
+        // alpha_mode: AlphaMode::Blend,
         cull_mode: None, // Disable culling to see the beam from all sides
         unlit: true,
         ..default()
@@ -172,7 +210,9 @@ fn spawn_scene(
         &mut tx_state.0.inner,
         &tx_state.1.inner,
         &tx_state.2.inner,
+        &mut tx_state.3.inner,
         tx_antenna_beam_material,
+        tx_antenna_beam_footprint_material,
         Some("Tx".into())
     );
     commands
@@ -187,6 +227,14 @@ fn spawn_scene(
         unlit: true,
         ..default()
     };
+    // Rx antenna beam footprint material
+    let rx_antenna_beam_footprint_material = StandardMaterial {
+        base_color: Color::BLACK,
+        // alpha_mode: AlphaMode::Blend,
+        cull_mode: None, // Disable culling to see the beam from all sides
+        unlit: true,
+        ..default()
+    };
     // Rx carrier entity
     let rx_carrier_entity = spawn_carrier(
         &mut commands,
@@ -195,7 +243,9 @@ fn spawn_scene(
         &mut rx_state.0.inner,
         &rx_state.1.inner,
         &rx_state.2.inner,
+        &mut rx_state.3.inner,
         rx_antenna_beam_material,
+        rx_antenna_beam_footprint_material,
         Some("Rx".into())
     );
     commands
