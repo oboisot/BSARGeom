@@ -7,8 +7,9 @@ use crate::{
     constants::{MAX_HEIGHT_M, MAX_VELOCITY_MPS},
     entities::{
         Antenna, AntennaBeam, AntennaBeamFootprint, Carrier, VelocityVector,
-        antenna_beam_transform_from_state, antenna_transform_from_state, carrier_transform_from_state,
-        velocity_indicator_transform_from_state,
+        antenna_beam_transform_from_state, antenna_transform_from_state,
+        carrier_transform_from_state, velocity_indicator_transform_from_state,
+        update_antenna_beam_footprint_mesh_from_state
         
     },
     scene::{Tx, TxCarrierState, TxAntennaState, TxAntennaBeamState, TxAntennaBeamFootprintState},
@@ -286,56 +287,6 @@ impl TxPanelWidget {
 }
 
 // see: https://github.com/bevyengine/bevy/issues/4864
-// fn update_tx(
-//     tx_panel_widget: Res<TxPanelWidget>,
-//     mut tx_carrier_q: Query<(&mut Transform, &Children), (With<Tx>, With<Carrier>)>,
-//     mut tx_antenna_q: Query<(&mut Transform, &Children), (Without<Tx>, With<Antenna>)>,
-//     mut tx_antenna_beam_q: Query<&mut Transform, (Without<Tx>, Without<Antenna>, With<AntennaBeam>)>,
-//     mut tx_velocity_indicator_q: Query<&mut Transform, (Without<Tx>, Without<Antenna>, Without<AntennaBeam>, With<VelocityVector>)>,
-//     mut tx_carrier_state: ResMut<TxCarrierState>,
-//     tx_antenna_state: Res<TxAntennaState>,
-//     tx_antenna_beam_state: Res<TxAntennaBeamState>
-// ) {
-//     if !(tx_panel_widget.transform_needs_update  ||
-//          tx_panel_widget.velocity_indicator_needs_update) {
-//         return; // No need to update transforms if no changes were made
-//     }
-//     for (mut carrier_tranform, carrier_children) in tx_carrier_q.iter_mut() {
-//         for carrier_child in carrier_children.iter() {
-//             if tx_panel_widget.transform_needs_update {
-//                 if let Ok((mut antenna_transform, antenna_children)) = tx_antenna_q.get_mut(carrier_child) {
-//                     // Update antenna beam width
-//                     for antenna_beam in antenna_children.iter() {
-//                         if let Ok(mut antenna_beam_transform) = tx_antenna_beam_q.get_mut(antenna_beam) {
-//                             // Update antenna beam width
-//                             *antenna_beam_transform = antenna_beam_transform_from_state(
-//                                 &tx_antenna_beam_state.inner
-//                             );
-//                         }
-//                     }
-//                     // Update antenna transform
-//                     *antenna_transform = antenna_transform_from_state(
-//                         &tx_antenna_state.inner
-//                     );
-//                     // Update carrier transform                
-//                     *carrier_tranform = carrier_transform_from_state(
-//                         &mut tx_carrier_state.inner,
-//                         &tx_antenna_state.inner
-//                     );
-//                 }
-//             }
-//             if tx_panel_widget.velocity_indicator_needs_update {
-//                 if let Ok(mut velocity_indicator_transform) = tx_velocity_indicator_q.get_mut(carrier_child) {
-//                     // Update velocity vector transform
-//                     *velocity_indicator_transform = velocity_indicator_transform_from_state(
-//                         &tx_carrier_state.inner
-//                     );
-//                 }
-//             }
-//         }
-//     }
-// }
-
 fn update_tx(
     tx_panel_widget: Res<TxPanelWidget>,
     mut tx_carrier_q: Query<(&mut Transform, &Children), (With<Tx>, With<Carrier>)>,
@@ -345,7 +296,10 @@ fn update_tx(
     mut tx_carrier_state: ResMut<TxCarrierState>,
     tx_antenna_state: Res<TxAntennaState>,
     tx_antenna_beam_state: Res<TxAntennaBeamState>,
-    mut tx_antenna_beam_footprint_state: ResMut<TxAntennaBeamFootprintState>
+    // Antenna footprint mesh update
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut tx_antenna_beam_footprint_state: ResMut<TxAntennaBeamFootprintState>,
+    tx_antenna_beam_footprint_q: Query<&Mesh3d, (With<Tx>, With<AntennaBeamFootprint>)>
 ) {
     if !(tx_panel_widget.transform_needs_update  ||
          tx_panel_widget.velocity_indicator_needs_update) {
@@ -373,6 +327,18 @@ fn update_tx(
                         &mut tx_carrier_state.inner,
                         &tx_antenna_state.inner
                     );
+                    // Update antenna beam footprint mesh in the same time
+                    for mesh_handle in tx_antenna_beam_footprint_q.iter() {
+                        if let Some(mesh) = meshes.get_mut(mesh_handle) {
+                            update_antenna_beam_footprint_mesh_from_state(
+                                &tx_carrier_state.inner,
+                                &tx_antenna_state.inner,
+                                &tx_antenna_beam_state.inner,
+                                &mut tx_antenna_beam_footprint_state.inner,
+                                mesh
+                            );
+                        }
+                    }
                 }
             }
             if tx_panel_widget.velocity_indicator_needs_update {

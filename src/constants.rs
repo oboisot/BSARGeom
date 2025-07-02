@@ -35,6 +35,14 @@ pub const TO_Y_UP: Quat = Quat::from_xyzw(
     -0.5 // w
 );
 
+/// Rotation constants to convert from Z-up (Physics) direction to Y-up (Bevy) direction coordinate systems.
+pub const TO_Y_UP_F64: DQuat = DQuat::from_xyzw(
+    0.5, // x
+    0.5, // y
+    0.5, // z
+    -0.5 // w
+);
+
 /// Transform relative to TO_Y_UP rotation.
 pub const TRANSFORM_TO_Y_UP: Transform = Transform::from_rotation(TO_Y_UP);
 

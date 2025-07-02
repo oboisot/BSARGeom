@@ -4,13 +4,17 @@ use bevy::{
     prelude::*,
     render::view::NoIndirectDrawing
 };
+use bevy_egui::EguiStartupSet;
 use bevy_panorbit_camera::PanOrbitCamera;
 
 pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_camera);
+        app.add_systems( // see: https://github.com/vladbat00/bevy_egui/blob/main/examples/ui.rs
+            PreStartup,
+            spawn_camera.before(EguiStartupSet::InitContexts),
+        );
     }
 }
 

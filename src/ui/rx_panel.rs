@@ -6,8 +6,12 @@ use bevy_egui::egui;
 use crate::{
     constants::{MAX_HEIGHT_M, MAX_VELOCITY_MPS},
     entities::{
-        antenna_beam_transform_from_state, antenna_transform_from_state, carrier_transform_from_state, velocity_indicator_transform_from_state, Antenna, AntennaBeam, Carrier, VelocityVector
-    }, scene::{Rx, RxAntennaBeamState, RxAntennaState, RxCarrierState}
+        Antenna, AntennaBeam, AntennaBeamFootprint, Carrier, VelocityVector,
+        antenna_beam_transform_from_state, antenna_transform_from_state,
+        carrier_transform_from_state, velocity_indicator_transform_from_state,
+        update_antenna_beam_footprint_mesh_from_state
+    },
+    scene::{Rx, RxAntennaBeamState, RxAntennaState, RxCarrierState, RxAntennaBeamFootprintState}
 };
 
 pub struct RxPanelPlugin;
@@ -290,7 +294,11 @@ fn update_rx(
     mut rx_velocity_indicator_q: Query<&mut Transform, (Without<Rx>, Without<Antenna>, Without<AntennaBeam>, With<VelocityVector>)>,
     mut rx_carrier_state: ResMut<RxCarrierState>,
     rx_antenna_state: Res<RxAntennaState>,
-    rx_antenna_beam_state: Res<RxAntennaBeamState>
+    rx_antenna_beam_state: Res<RxAntennaBeamState>,
+    // Antenna footprint mesh update
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut rx_antenna_beam_footprint_state: ResMut<RxAntennaBeamFootprintState>,
+    rx_antenna_beam_footprint_q: Query<&Mesh3d, (With<Rx>, With<AntennaBeamFootprint>)>
 ) {
     if !(rx_panel_widget.transform_needs_update  ||
          rx_panel_widget.velocity_indicator_needs_update) {
@@ -318,6 +326,18 @@ fn update_rx(
                         &mut rx_carrier_state.inner,
                         &rx_antenna_state.inner
                     );
+                }
+                // Update antenna beam footprint mesh in the same time
+                for mesh_handle in rx_antenna_beam_footprint_q.iter() {
+                    if let Some(mesh) = meshes.get_mut(mesh_handle) {
+                        update_antenna_beam_footprint_mesh_from_state(
+                            &rx_carrier_state.inner,
+                            &rx_antenna_state.inner,
+                            &rx_antenna_beam_state.inner,
+                            &mut rx_antenna_beam_footprint_state.inner,
+                            mesh
+                        );
+                    }
                 }
             }
             if rx_panel_widget.velocity_indicator_needs_update {

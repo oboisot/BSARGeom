@@ -197,13 +197,13 @@ fn spawn_scene(
     // Tx antenna beam footprint material
     let tx_antenna_beam_footprint_material = StandardMaterial {
         base_color: Color::WHITE,
-        // alpha_mode: AlphaMode::Blend,
+        alpha_mode: AlphaMode::Opaque,
         cull_mode: None, // Disable culling to see the beam from all sides
         unlit: true,
         ..default()
     };
     // Tx carrier entity
-    let tx_carrier_entity = spawn_carrier(
+    let (tx_carrier_entity, tx_antenna_beam_footprint_entity) = spawn_carrier(
         &mut commands,
         &mut meshes,
         &mut materials,
@@ -218,6 +218,9 @@ fn spawn_scene(
     commands
         .entity(tx_carrier_entity)
         .insert(Tx); // Add Tx Component marker to entity
+    commands
+        .entity(tx_antenna_beam_footprint_entity)
+        .insert(Tx); // Add Tx Component marker to entity
 
     // Rx antenna beam material
     let rx_antenna_beam_material = StandardMaterial {
@@ -230,13 +233,13 @@ fn spawn_scene(
     // Rx antenna beam footprint material
     let rx_antenna_beam_footprint_material = StandardMaterial {
         base_color: Color::BLACK,
-        // alpha_mode: AlphaMode::Blend,
+        alpha_mode: AlphaMode::Opaque,
         cull_mode: None, // Disable culling to see the beam from all sides
         unlit: true,
         ..default()
     };
     // Rx carrier entity
-    let rx_carrier_entity = spawn_carrier(
+    let (rx_carrier_entity, rx_antenna_beam_footprint_entity) = spawn_carrier(
         &mut commands,
         &mut meshes,
         &mut materials,
@@ -250,5 +253,8 @@ fn spawn_scene(
     );
     commands
         .entity(rx_carrier_entity)
-        .insert(Rx); // Add Tx Component marker to entity
+        .insert(Rx); // Add Rx Component marker to entity
+    commands
+        .entity(rx_antenna_beam_footprint_entity)
+        .insert(Rx); // Add Rx Component marker to entity
 }

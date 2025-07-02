@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_egui::{EguiContexts, EguiPlugin, egui};
+use bevy_egui::{EguiContexts, EguiPlugin, EguiPrimaryContextPass, egui};
 use egui_extras;
 
 use crate::{
@@ -15,16 +15,18 @@ pub struct AppPlugin;
 impl Plugin for AppPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_plugins(EguiPlugin { enable_multipass_for_primary_context: false })
+            // .add_plugins(EguiPlugin { enable_multipass_for_primary_context: false })
+            .add_plugins(EguiPlugin::default())
             .add_plugins((MenuPlugin, TxPanelPlugin, RxPanelPlugin))
             .add_systems(Startup, ui_setup)
-            .add_systems(Update, ui_system);
+            .add_systems(EguiPrimaryContextPass, ui_system);
     }
 }
 
-fn ui_setup(mut contexts: EguiContexts) {
+fn ui_setup(mut contexts: EguiContexts) -> Result {    
+    let ctx = contexts.ctx_mut()?;
+
     // Install image loaders for egui
-    let ctx = contexts.ctx_mut();
     egui_extras::install_image_loaders(&ctx); // This gives us image support
 
     // UI style
@@ -40,6 +42,8 @@ fn ui_setup(mut contexts: EguiContexts) {
     //
     dark_visuals.slider_trailing_fill = true; // Fill the slider trailing area
     ctx.set_visuals_of(egui::Theme::Dark, dark_visuals);
+
+    Ok(())
 }
 
 
@@ -57,9 +61,10 @@ fn ui_system(
     mut rx_carrier_state: ResMut<RxCarrierState>,
     mut rx_antenna_state: ResMut<RxAntennaState>,
     mut rx_antenna_beam_state: ResMut<RxAntennaBeamState>
-) {
-    let ctx = contexts.ctx_mut();
+) -> Result {
+    let ctx = contexts.ctx_mut()?;
 
+    // Side panel global menu
     egui::SidePanel::left("menu")
         .resizable(false)
         .default_width(48.0)
@@ -99,4 +104,6 @@ fn ui_system(
                 &mut rx_antenna_beam_state
             );
         });
+    
+    Ok(())
 }

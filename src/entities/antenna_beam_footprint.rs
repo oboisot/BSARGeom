@@ -8,7 +8,7 @@ use bevy::{
 
 
 use crate::{
-    constants::ENU_TO_NED_F64,
+    constants::{ENU_TO_NED_F64, TO_Y_UP_F64},
     entities::{AntennaBeamState, AntennaState, CarrierState}
 };
 
@@ -16,6 +16,7 @@ const ANTENNA_BEAM_FOOTPRINT_SIZE: usize = 2501; // Size of the antenna beam foo
 const STEP_THETA: f64 = TAU / (ANTENNA_BEAM_FOOTPRINT_SIZE - 1) as f64; // Step size for the antenna beam footprint mesh
 
 pub struct AntennaBeamFootprintState {
+    // Antenna Footprint line coordinates in World frame
     pub points: Vec<DVec3>
 }
 
@@ -93,14 +94,14 @@ pub fn update_antenna_beam_footprint_mesh_from_state(
             antenna_state.elevation_rad,
             antenna_state.bank_rad
         );
-        let rot = (
-            carrier_rotation *
-            antenna_rotation
-        ).inverse();
+        let mut rot_antenna_to_world = carrier_rotation * antenna_rotation;
+        let rot_world_to_antenna = rot_antenna_to_world.inverse(); // Inverse rotation to transform from World frame to Antenna frame
+        rot_antenna_to_world = TO_Y_UP_F64 * rot_antenna_to_world; // Convert from Z-up to Y-up frame
+        let carrier_position_y_up = TO_Y_UP_F64 * carrier_state.position_m;
         // Parameters for the plane/cone intersection computation
-        let n = rot * DVec3::Z; // Normal vector of the ground plane in Antenna referential
-        let o = rot * (-carrier_state.position_m); // Origin of the ground plane in Antenna referential
-        let d =  n.dot(o); // Distance from the origin to the ground plane in Antenna referential
+        let n = rot_world_to_antenna * DVec3::Z; // Normal vector of the ground plane in Antenna referential
+        let o = rot_world_to_antenna * carrier_state.position_m; // Origin of the ground plane in Antenna referential
+        let d =  -n.dot(o); // Distance from the origin to the ground plane in Antenna referential
         let ty = (0.5 * antenna_beam_state.azimuth_beam_width_rad).tan(); // Half of the azimuth beam width in radians
         let tz = (0.5 * antenna_beam_state.elevation_beam_width_rad).tan(); // Half of the elevation beam width in radians
         let nyty = n.y * ty; // Normal vector component in the Y direction scaled by the azimuth beam width
@@ -109,10 +110,13 @@ pub fn update_antenna_beam_footprint_mesh_from_state(
         let (mut s, mut c): (f64, f64); // (sin(theta), cos(theta))
         for (i, point) in antenna_beam_footprint_state.points.iter_mut().enumerate() {
             (s, c) = (i as f64 * STEP_THETA).sin_cos(); // Angle in radians
-            // Update resource with the new point
+            // Update resource with the new point in Antenna referential
             point.x = d / (n.x + nyty * c + nztz * s);
             point.y = ty * c * point.x;
             point.z = tz * s * point.x;
+            // Transform point to World frame
+            *point = rot_antenna_to_world * *point + carrier_position_y_up; // Transform point to World frame and Y-up frame
+            point.y = 0.0; // Ensure to have a real zero in Z-up frame (which is here Y axis)
             // Update mesh with the new point
             mesh_pos[i] = [
                 point.x as f32,

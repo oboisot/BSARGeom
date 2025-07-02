@@ -24,9 +24,9 @@ fn main() {
                     ..default()
                 }),
                 ..default()
-            }))    
-        .add_plugins(AppPlugin)    
+            }))           
         .add_plugins(PanOrbitCameraPlugin)
+        .add_plugins(AppPlugin) 
         .add_plugins(ScenePlugin)
         .run();
 }

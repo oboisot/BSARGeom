@@ -76,7 +76,7 @@ pub fn spawn_carrier(
     antenna_beam_material: StandardMaterial,
     antenna_beam_footprint_material: StandardMaterial,
     name: Option<String>
-) -> Entity {
+) -> (Entity, Entity) { // Carrier entity, Antenna Beam Footprint entity
     // Entity name
     let name = if let Some(name) = name { name } else { "".to_string() };
     // Carrier
@@ -118,22 +118,6 @@ pub fn spawn_carrier(
         .insert(AntennaBeam) // Add AntennaBeam component
         .insert(Name::new(format!("{} Antenna Beam", name)));
 
-    // Antenna beam footprint
-    let antenna_beam_footprint_entity = spawn_antenna_beam_footprint(
-        commands,
-        meshes,
-        materials,
-        carrier_state,
-        antenna_state,
-        antenna_beam_state,
-        antenna_beam_footprint_state,
-        antenna_beam_footprint_material
-    );
-    commands
-        .entity(antenna_beam_footprint_entity)
-        .insert(AntennaBeamFootprint) // Add AntennaBeamFootprint component
-        .insert(Name::new(format!("{} Antenna Beam Footprint", name)));
-
     // Velocity vector
     let velocity_indicator_entity = spawn_velocity_indicator(
         commands,
@@ -149,16 +133,33 @@ pub fn spawn_carrier(
     // Concatenate entities (parent -> child): Carrier -> Antenna -> AntennaBeam
     commands // Adds antenna beam AND antenna beam footprint as children of antenna entity
         .entity(antenna_entity)
-        .add_children(&[
-            antenna_beam_entity,
-            antenna_beam_footprint_entity
-        ]);
-    commands // Adds antenna and velocity vector as children of carrier entity
+        .add_child(antenna_beam_entity);
+    // Carrier entity added to the World frame
+    let carrier_id = commands // Adds antenna and velocity vector as children of carrier entity
         .entity(carrier_entity)
         .add_children(&[
             antenna_entity,
             velocity_indicator_entity,
-        ]).id()
+        ]).id();
+    
+    // Antenna beam footprint added to World frame
+    let antenna_beam_footprint_entity = spawn_antenna_beam_footprint(
+        commands,
+        meshes,
+        materials,
+        carrier_state,
+        antenna_state,
+        antenna_beam_state,
+        antenna_beam_footprint_state,
+        antenna_beam_footprint_material
+    );
+    let antenna_beam_footprint_id = commands
+        .entity(antenna_beam_footprint_entity)
+        .insert(AntennaBeamFootprint) // Add AntennaBeamFootprint component
+        .insert(Name::new(format!("{} Antenna Beam Footprint", name)))
+        .id();
+    
+    (carrier_id, antenna_beam_footprint_id)
 }
 
 pub fn carrier_transform_from_state(
