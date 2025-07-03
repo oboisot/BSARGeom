@@ -8,7 +8,7 @@ use crate::{
     world::WorldPlugin,
     entities::{
         AntennaBeamState, AntennaBeamFootprintState, AntennaState, CarrierState,
-        spawn_carrier
+        spawn_carrier, spawn_iso_range_ellipsoid, iso_range_ellipsoid_transform_from_state
     }
 };
 
@@ -44,9 +44,9 @@ impl Default for TxCarrierState {
     fn default() -> Self {
         Self {
             inner: CarrierState {
-                heading_rad: 0.0,
-                elevation_rad: 0.0,
-                bank_rad: 0.0,
+                heading_deg: 0.0,
+                elevation_deg: 0.0,
+                bank_deg: 0.0,
                 height_m: 3000.0,
                 velocity_mps: 120.0,
                 position_m: DVec3::ZERO
@@ -65,9 +65,9 @@ impl Default for TxAntennaState {
     fn default() -> Self {
         Self {
             inner: AntennaState {
-                heading_rad: std::f64::consts::FRAC_PI_2, // +90°, right looking
-                elevation_rad: -std::f64::consts::FRAC_PI_4, // 45° of depression
-                bank_rad: 0.0
+                heading_deg: 90.0,
+                elevation_deg: -30.0,
+                bank_deg: 0.0
             }
         }
     }
@@ -83,8 +83,8 @@ impl Default for TxAntennaBeamState {
     fn default() -> Self {
         Self {
             inner: AntennaBeamState {
-                elevation_beam_width_rad: 5.0f64.to_radians(),
-                azimuth_beam_width_rad: 5.0f64.to_radians()
+                elevation_beam_width_deg: 20.0f64,
+                azimuth_beam_width_deg: 20.0f64
             }
         }
     }
@@ -118,11 +118,11 @@ impl Default for RxCarrierState {
     fn default() -> Self {
         Self {
             inner: CarrierState {
-                heading_rad: 0.0,
-                elevation_rad: 0.0,
-                bank_rad: 0.0,
+                heading_deg: 0.0,
+                elevation_deg: 0.0,
+                bank_deg: 0.0,
                 height_m: 1000.0,
-                velocity_mps: 40.0,
+                velocity_mps: 36.0,
                 position_m: DVec3::ZERO
             }
         }
@@ -139,9 +139,9 @@ impl Default for RxAntennaState {
     fn default() -> Self {
         Self {
             inner: AntennaState {
-                heading_rad: std::f64::consts::FRAC_PI_4, // 0°, forward looking
-                elevation_rad: -std::f64::consts::FRAC_PI_6, // 30° of depression
-                bank_rad: 0.0
+                heading_deg: 90.0, // 0°, right-looking
+                elevation_deg: -45.0, // 45° of depression
+                bank_deg: 0.0
             }
         }
     }
@@ -157,8 +157,8 @@ impl Default for RxAntennaBeamState {
     fn default() -> Self {
         Self {
             inner: AntennaBeamState {
-                elevation_beam_width_rad: 22.0f64.to_radians(),
-                azimuth_beam_width_rad: 20.0f64.to_radians()
+                elevation_beam_width_deg: 16.0f64,
+                azimuth_beam_width_deg: 16.0f64
             }
         }
     }
@@ -178,6 +178,9 @@ impl Default for RxAntennaBeamFootprintState {
     }
 }
 
+/// Iso-range ellipsoid marker component
+#[derive(Component)]
+pub struct IsoRangeEllipsoid;
 
 fn spawn_scene(
     mut commands: Commands,
@@ -188,7 +191,7 @@ fn spawn_scene(
 ) {
     // Tx antenna beam material
     let tx_antenna_beam_material = StandardMaterial {
-        base_color: Color::WHITE.with_alpha(0.3),
+        base_color: Color::linear_rgba(1.0, 1.0, 1.0, 0.15), // White
         alpha_mode: AlphaMode::Blend,
         cull_mode: None, // Disable culling to see the beam from all sides
         unlit: true,
@@ -196,14 +199,19 @@ fn spawn_scene(
     };
     // Tx antenna beam footprint material
     let tx_antenna_beam_footprint_material = StandardMaterial {
-        base_color: Color::WHITE,
+        base_color: Color::linear_rgb(1.0, 1.0, 1.0), // White
         alpha_mode: AlphaMode::Opaque,
         cull_mode: None, // Disable culling to see the beam from all sides
         unlit: true,
         ..default()
     };
     // Tx carrier entity
-    let (tx_carrier_entity, tx_antenna_beam_footprint_entity) = spawn_carrier(
+    let (
+        tx_carrier_entity,
+        tx_antenna_beam_footprint_entity,
+        tx_antenna_beam_elevation_line_entity,
+        tx_antenna_beam_azimuth_line_entity
+    ) = spawn_carrier(
         &mut commands,
         &mut meshes,
         &mut materials,
@@ -221,10 +229,16 @@ fn spawn_scene(
     commands
         .entity(tx_antenna_beam_footprint_entity)
         .insert(Tx); // Add Tx Component marker to entity
+    commands
+        .entity(tx_antenna_beam_elevation_line_entity)
+        .insert(Tx); // Add Tx Component marker to entity
+    commands
+        .entity(tx_antenna_beam_azimuth_line_entity)
+        .insert(Tx); // Add Tx Component marker to entity
 
     // Rx antenna beam material
     let rx_antenna_beam_material = StandardMaterial {
-        base_color: Color::BLACK.with_alpha(0.3),
+        base_color: Color::linear_rgba(0.0, 0.0, 0.0, 0.15), // White
         alpha_mode: AlphaMode::Blend,
         cull_mode: None, // Disable culling to see the beam from all sides
         unlit: true,
@@ -232,14 +246,19 @@ fn spawn_scene(
     };
     // Rx antenna beam footprint material
     let rx_antenna_beam_footprint_material = StandardMaterial {
-        base_color: Color::BLACK,
+        base_color: Color::linear_rgb(0.0, 0.0, 0.0), // Black
         alpha_mode: AlphaMode::Opaque,
         cull_mode: None, // Disable culling to see the beam from all sides
         unlit: true,
         ..default()
     };
     // Rx carrier entity
-    let (rx_carrier_entity, rx_antenna_beam_footprint_entity) = spawn_carrier(
+    let (
+        rx_carrier_entity,
+        rx_antenna_beam_footprint_entity,
+        rx_antenna_beam_elevation_line_entity,
+        rx_antenna_beam_azimuth_line_entity
+    ) = spawn_carrier(
         &mut commands,
         &mut meshes,
         &mut materials,
@@ -257,4 +276,34 @@ fn spawn_scene(
     commands
         .entity(rx_antenna_beam_footprint_entity)
         .insert(Rx); // Add Rx Component marker to entity
+    commands
+        .entity(rx_antenna_beam_elevation_line_entity)
+        .insert(Rx); // Add Rx Component marker to entity
+    commands
+        .entity(rx_antenna_beam_azimuth_line_entity)
+        .insert(Rx); // Add Rx Component marker to entity
+
+    // Iso-range ellipsoid material
+    let iso_range_ellipsoid_material = StandardMaterial {
+        base_color: Color::linear_rgba(0.839215686, 0.152941176, 0.156862745, 0.15),
+        alpha_mode: AlphaMode::Blend,
+        cull_mode: None, // Disable culling to see the beam from all sides
+        unlit: true,
+        ..default()
+    };
+    // Iso-range ellipsoid entity
+    let iso_range_ellipsoid_entity = spawn_iso_range_ellipsoid(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        iso_range_ellipsoid_material
+    );
+    commands
+        .entity(iso_range_ellipsoid_entity)
+        .insert(iso_range_ellipsoid_transform_from_state( // Update ellipsoid transform
+            &tx_state.0.inner.position_m, // OT in world frame
+            &rx_state.0.inner.position_m  // OR in world frame
+        ))
+        .insert(IsoRangeEllipsoid) // Add IsoRangeEllipsoid Component marker to entity
+        .insert(Name::new("Iso Range Ellipsoid"));
 }

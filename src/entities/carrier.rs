@@ -9,8 +9,11 @@ use crate::{
         ENU_TO_NED_F64, NEG_YAXIS_TO_XAXIS, POS_YAXIS_TO_XAXIS, TO_Y_UP
     },
     entities::{
-        AntennaBeamFootprintState, spawn_antenna_beam_footprint,
-        spawn_antenna_beam, spawn_axes_helper, spawn_velocity_indicator
+        AntennaBeamFootprintState,
+        spawn_antenna_beam, spawn_axes_helper, spawn_velocity_indicator,
+        spawn_antenna_beam_footprint,
+        spawn_antenna_beam_footprint_elevation_line,
+        spawn_antenna_beam_footprint_azimuth_line
     }
 };
 
@@ -30,6 +33,14 @@ pub struct AntennaBeam;
 #[derive(Component)]
 pub struct AntennaBeamFootprint;
 
+/// Component marker to identify the Antenna Beam elevation line.
+#[derive(Component)]
+pub struct AntennaBeamElevationLine;
+
+/// Component marker to identify the Antenna Beam azimuth line.
+#[derive(Component)]
+pub struct AntennaBeamAzimuthLine;
+
 /// Component marker to identify the Velocity Vector entity.
 #[derive(Component)]
 pub struct VelocityVector;
@@ -38,9 +49,9 @@ pub struct VelocityVector;
 #[derive(Clone)]
 pub struct CarrierState {
     /// Carrier orientation in World frame (NED referential)
-    pub heading_rad: f64,
-    pub elevation_rad: f64,
-    pub bank_rad: f64,
+    pub heading_deg: f64,
+    pub elevation_deg: f64,
+    pub bank_deg: f64,
     // Carrier height
     pub height_m: f64,
     // Carrier velocity
@@ -53,16 +64,16 @@ pub struct CarrierState {
 #[derive(Clone)]
 pub struct AntennaState {
     /// Antenna orientation relative to Carrier
-    pub heading_rad: f64,
-    pub elevation_rad: f64,
-    pub bank_rad: f64,
+    pub heading_deg: f64,
+    pub elevation_deg: f64,
+    pub bank_deg: f64,
 }
 
 /// Struct to keep the internal state of the Antenna Beam
 #[derive(Clone)]
 pub struct AntennaBeamState {
-    pub elevation_beam_width_rad: f64,
-    pub azimuth_beam_width_rad: f64,
+    pub elevation_beam_width_deg: f64,
+    pub azimuth_beam_width_deg: f64,
 }
 
 pub fn spawn_carrier(
@@ -76,7 +87,7 @@ pub fn spawn_carrier(
     antenna_beam_material: StandardMaterial,
     antenna_beam_footprint_material: StandardMaterial,
     name: Option<String>
-) -> (Entity, Entity) { // Carrier entity, Antenna Beam Footprint entity
+) -> (Entity, Entity, Entity, Entity) { // (Carrier entity, Antenna Beam Footprint entity, Antenna Beam Elevation Line entity, Antenna Beam Azimuth Line entity)
     // Entity name
     let name = if let Some(name) = name { name } else { "".to_string() };
     // Carrier
@@ -158,8 +169,39 @@ pub fn spawn_carrier(
         .insert(AntennaBeamFootprint) // Add AntennaBeamFootprint component
         .insert(Name::new(format!("{} Antenna Beam Footprint", name)))
         .id();
-    
-    (carrier_id, antenna_beam_footprint_id)
+
+    // Antenna beam elevation line added to World frame
+    let antenna_beam_elevation_line_entity = spawn_antenna_beam_footprint_elevation_line(
+        commands,
+        meshes,
+        materials,
+        antenna_beam_footprint_state
+    );
+    let antenna_beam_elevation_line_id = commands
+        .entity(antenna_beam_elevation_line_entity)
+        .insert(AntennaBeamElevationLine) // Add AntennaBeamElevationLine component
+        .insert(Name::new(format!("{} Antenna Beam Elevation Line", name)))
+        .id();
+
+    // Antenna beam azimuth line added to World frame
+    let antenna_beam_azimuth_line_entity = spawn_antenna_beam_footprint_azimuth_line(
+        commands,
+        meshes,
+        materials,
+        antenna_beam_footprint_state
+    );
+    let antenna_beam_azimuth_line_id = commands
+        .entity(antenna_beam_azimuth_line_entity)
+        .insert(AntennaBeamAzimuthLine) // Add AntennaBeamAzimuthLine component
+        .insert(Name::new(format!("{} Antenna Beam Azimuth Line", name)))
+        .id();
+
+    (
+        carrier_id,
+        antenna_beam_footprint_id,
+        antenna_beam_elevation_line_id,
+        antenna_beam_azimuth_line_id
+    )
 }
 
 pub fn carrier_transform_from_state(
@@ -174,16 +216,16 @@ pub fn carrier_transform_from_state(
     // Carrier rotation from ENU to NED frame + orientation
     let carrier_rotation = ENU_TO_NED_F64 * DQuat::from_euler(
         EulerRot::ZYX,
-        carrier_state.heading_rad,
-        carrier_state.elevation_rad,
-        carrier_state.bank_rad
+        carrier_state.heading_deg.to_radians(),
+        carrier_state.elevation_deg.to_radians(),
+        carrier_state.bank_deg.to_radians()
     );    
     // Antenna rotation relative to Carrier
     let antenna_rotation = DQuat::from_euler(
         EulerRot::ZYX,
-        antenna_state.heading_rad,
-        antenna_state.elevation_rad,
-        antenna_state.bank_rad
+        antenna_state.heading_deg.to_radians(),
+        antenna_state.elevation_deg.to_radians(),
+        antenna_state.bank_deg.to_radians()
     );
     // Antenna pointing direction
     let ax = (
@@ -228,9 +270,9 @@ pub fn antenna_transform_from_state(
 ) -> Transform {
     let rotation = Quat::from_euler(
         EulerRot::ZYX,
-        antenna_state.heading_rad as f32,
-        antenna_state.elevation_rad as f32,
-        antenna_state.bank_rad as f32
+        antenna_state.heading_deg.to_radians() as f32,
+        antenna_state.elevation_deg.to_radians() as f32,
+        antenna_state.bank_deg.to_radians() as f32
     );
     // Note: we don't apply ENU_TO_NED here because the antenna is already in the NED frame
     Transform::from_rotation(rotation)
@@ -241,10 +283,10 @@ pub fn antenna_beam_transform_from_state(
 ) -> Transform {
     // Compute scale factors for cone base, based on beam widths
     let scale_azi = CONE_LENGTH * (
-        0.5 * antenna_beam_state.azimuth_beam_width_rad
+        0.5 * antenna_beam_state.azimuth_beam_width_deg.to_radians()
     ).tan();
     let scale_elv = CONE_LENGTH * (
-        0.5 * antenna_beam_state.elevation_beam_width_rad
+        0.5 * antenna_beam_state.elevation_beam_width_deg.to_radians()
     ).tan();
 
     Transform {

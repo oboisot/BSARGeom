@@ -1,18 +1,22 @@
-use std::f64::consts::{FRAC_PI_2, PI, TAU};
-
 use bevy::prelude::*;
 use bevy_egui::egui;
 
 use crate::{
     constants::{MAX_HEIGHT_M, MAX_VELOCITY_MPS},
     entities::{
-        Antenna, AntennaBeam, AntennaBeamFootprint, Carrier, VelocityVector,
+        Antenna, AntennaBeam, AntennaBeamFootprint, AntennaBeamElevationLine, AntennaBeamAzimuthLine,
+        Carrier, VelocityVector,
         antenna_beam_transform_from_state, antenna_transform_from_state,
         carrier_transform_from_state, velocity_indicator_transform_from_state,
-        update_antenna_beam_footprint_mesh_from_state
-        
+        iso_range_ellipsoid_transform_from_state,
+        update_antenna_beam_footprint_mesh_from_state,
+        update_antenna_beam_footprint_elevation_line_mesh_from_state,
+        update_antenna_beam_footprint_azimuth_line_mesh_from_state
     },
-    scene::{Tx, TxCarrierState, TxAntennaState, TxAntennaBeamState, TxAntennaBeamFootprintState},
+    scene::{
+        Tx, TxCarrierState, TxAntennaState, TxAntennaBeamState, TxAntennaBeamFootprintState,
+        RxCarrierState, IsoRangeEllipsoid
+    },
 };
 
 pub struct TxPanelPlugin;
@@ -67,7 +71,7 @@ impl TxPanelWidget {
         ));
         ui.separator();
 
-        // Carrier heading angle
+        // Carrier settings
         egui::Grid::new("tx_carrier_grid")
             .num_columns(2)
             .striped(true)
@@ -81,6 +85,7 @@ impl TxPanelWidget {
                 old_state = tx_carrier_state.inner.height_m;
                 ui.add(
                     egui::DragValue::new(&mut tx_carrier_state.inner.height_m)
+                        .update_while_editing(false)
                         .speed(10.0)
                         .range(0.0..=MAX_HEIGHT_M)
                         .fixed_decimals(3)
@@ -99,6 +104,7 @@ impl TxPanelWidget {
                 old_state = tx_carrier_state.inner.velocity_mps;
                 ui.add(
                     egui::DragValue::new(&mut tx_carrier_state.inner.velocity_mps)
+                        .update_while_editing(false)
                         .speed(10.0)
                         .range(0.0..=MAX_VELOCITY_MPS)
                         .fixed_decimals(3)
@@ -114,15 +120,16 @@ impl TxPanelWidget {
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
                 ui.label("Heading: ").on_hover_text(hover_text.clone());
-                old_state = tx_carrier_state.inner.heading_rad;
+                old_state = tx_carrier_state.inner.heading_deg;
                 ui.add(
-                    egui::Slider::new(&mut tx_carrier_state.inner.heading_rad, 0.0..=TAU)
+                    egui::Slider::new(&mut tx_carrier_state.inner.heading_deg, 0.0..=360.0)
+                        .suffix("°")
                         .smart_aim(false)
-                        .step_by(0.0)
-                        .custom_formatter(|n, _| format!("{:.3}°", n.to_degrees()))
-                        .custom_parser(|s| if let Ok(s) = s.parse::<f64>() { Some(s.to_radians()) } else { None })
+                        .step_by(1.0)                
+                        .drag_value_speed(1.0)
+                        .fixed_decimals(3)
                 ).on_hover_text(hover_text);
-                if old_state != tx_carrier_state.inner.heading_rad {
+                if old_state != tx_carrier_state.inner.heading_deg {
                     self.transform_needs_update = true;
                 }
                 ui.end_row();
@@ -132,15 +139,16 @@ impl TxPanelWidget {
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
                 ui.label("Elevation: ").on_hover_text(hover_text.clone());
-                old_state = tx_carrier_state.inner.elevation_rad;
+                old_state = tx_carrier_state.inner.elevation_deg;
                 ui.add(
-                    egui::Slider::new(&mut tx_carrier_state.inner.elevation_rad, -FRAC_PI_2..=FRAC_PI_2)
+                    egui::Slider::new(&mut tx_carrier_state.inner.elevation_deg, -90.0..=90.0)
+                        .suffix("°")
                         .smart_aim(false)
-                        .step_by(0.0)
-                        .custom_formatter(|n, _| format!("{:.3}°", n.to_degrees()))
-                        .custom_parser(|s| if let Ok(s) = s.parse::<f64>() { Some(s.to_radians()) } else { None })
+                        .step_by(1.0)                
+                        .drag_value_speed(1.0)
+                        .fixed_decimals(3)
                 ).on_hover_text(hover_text);
-                if old_state != tx_carrier_state.inner.elevation_rad {
+                if old_state != tx_carrier_state.inner.elevation_deg {
                     self.transform_needs_update = true;
                 }
                 ui.end_row();
@@ -150,15 +158,16 @@ impl TxPanelWidget {
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
                 ui.label("Bank: ").on_hover_text(hover_text.clone());
-                old_state = tx_carrier_state.inner.bank_rad;
+                old_state = tx_carrier_state.inner.bank_deg;
                 ui.add(
-                    egui::Slider::new(&mut tx_carrier_state.inner.bank_rad, -FRAC_PI_2..=FRAC_PI_2)
+                    egui::Slider::new(&mut tx_carrier_state.inner.bank_deg, -90.0..=90.0)
+                        .suffix("°")
                         .smart_aim(false)
-                        .step_by(0.0)
-                        .custom_formatter(|n, _| format!("{:.3}°", n.to_degrees()))
-                        .custom_parser(|s| if let Ok(s) = s.parse::<f64>() { Some(s.to_radians()) } else { None })
+                        .step_by(1.0)                
+                        .drag_value_speed(1.0)
+                        .fixed_decimals(3)
                 ).on_hover_text(hover_text);
-                if old_state != tx_carrier_state.inner.bank_rad {
+                if old_state != tx_carrier_state.inner.bank_deg {
                     self.transform_needs_update = true;
                 }
                 ui.end_row();
@@ -170,10 +179,10 @@ impl TxPanelWidget {
         ));
         ui.separator();
 
-        // Carrier heading angle
-        ui.label("Orientation");
-        ui.separator();
         // Antenna orientation settings
+        ui.vertical_centered(|ui| ui.label("Orientation"));
+        ui.separator();
+        
         egui::Grid::new("tx_antenna_orientation_grid")
             .num_columns(2)
             .striped(true)
@@ -184,16 +193,17 @@ impl TxPanelWidget {
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
                 ui.label("Heading: ").on_hover_text(hover_text.clone());
-                old_state = tx_antenna_state.inner.heading_rad;
+                old_state = tx_antenna_state.inner.heading_deg;
                 ui.add(
-                    egui::Slider::new(&mut tx_antenna_state.inner.heading_rad, -PI..=PI)
+                    egui::Slider::new(&mut tx_antenna_state.inner.heading_deg, -180.0..=180.0)
+                        .suffix("°")
                         .smart_aim(false)
-                        .step_by(0.0)
-                        .custom_formatter(|n, _| format!("{:.3}°", n.to_degrees()))
-                        .custom_parser(|s| if let Ok(s) = s.parse::<f64>() { Some(s.to_radians()) } else { None })
+                        .step_by(1.0)                
+                        .drag_value_speed(1.0)
+                        .fixed_decimals(3)
                 )
                 .on_hover_text(hover_text);
-                if old_state != tx_antenna_state.inner.heading_rad {
+                if old_state != tx_antenna_state.inner.heading_deg {
                     self.transform_needs_update = true;
                 }
                 ui.end_row();
@@ -203,16 +213,17 @@ impl TxPanelWidget {
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
                 ui.label("Elevation: ").on_hover_text(hover_text.clone());
-                old_state = tx_antenna_state.inner.elevation_rad;
+                old_state = tx_antenna_state.inner.elevation_deg;
                 ui.add(
-                    egui::Slider::new(&mut tx_antenna_state.inner.elevation_rad, -FRAC_PI_2..=0.0)
+                    egui::Slider::new(&mut tx_antenna_state.inner.elevation_deg, -90.0..=0.0)
+                        .suffix("°")
                         .smart_aim(false)
-                        .step_by(0.0)
-                        .custom_formatter(|n, _| format!("{:.3}°", n.to_degrees()))
-                        .custom_parser(|s| if let Ok(s) = s.parse::<f64>() { Some(s.to_radians()) } else { None })
+                        .step_by(1.0)                
+                        .drag_value_speed(1.0)
+                        .fixed_decimals(3)
                 )
                 .on_hover_text(hover_text);
-                if old_state != tx_antenna_state.inner.elevation_rad {
+                if old_state != tx_antenna_state.inner.elevation_deg {
                     self.transform_needs_update = true;
                 }
                 ui.end_row();
@@ -222,22 +233,23 @@ impl TxPanelWidget {
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
                 ui.label("Bank: ").on_hover_text(hover_text.clone());
-                old_state = tx_antenna_state.inner.bank_rad;
+                old_state = tx_antenna_state.inner.bank_deg;
                 ui.add(
-                    egui::Slider::new(&mut tx_antenna_state.inner.bank_rad, -FRAC_PI_2..=FRAC_PI_2)
+                    egui::Slider::new(&mut tx_antenna_state.inner.bank_deg, -90.0..=90.0)
+                        .suffix("°")
                         .smart_aim(false)
-                        .step_by(0.0)
-                        .custom_formatter(|n, _| format!("{:.3}°", n.to_degrees()))
-                        .custom_parser(|s| if let Ok(s) = s.parse::<f64>() { Some(s.to_radians()) } else { None })
+                        .step_by(1.0)                
+                        .drag_value_speed(1.0)
+                        .fixed_decimals(3)
                 )
                 .on_hover_text(hover_text);
-                if old_state != tx_antenna_state.inner.bank_rad {
+                if old_state != tx_antenna_state.inner.bank_deg {
                     self.transform_needs_update = true;
                 }
                 ui.end_row();
             });
 
-        ui.label("Beamwidth (half-power)");
+        ui.vertical_centered(|ui| ui.label("Beamwidth (half-power)"));
         ui.separator();
         // Antenna beamwidth settings
         egui::Grid::new("tx_antenna_beamwidth_grid")
@@ -250,16 +262,17 @@ impl TxPanelWidget {
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
                 ui.label("Elevation: ").on_hover_text(hover_text.clone());
-                old_state = tx_antenna_beam_state.inner.elevation_beam_width_rad;
+                old_state = tx_antenna_beam_state.inner.elevation_beam_width_deg;
                 ui.add(
-                    egui::Slider::new(&mut tx_antenna_beam_state.inner.elevation_beam_width_rad, 0.0..=FRAC_PI_2)
+                    egui::Slider::new(&mut tx_antenna_beam_state.inner.elevation_beam_width_deg, 0.0..=90.0)
+                        .suffix("°")
                         .smart_aim(false)
-                        .step_by(0.0)
-                        .custom_formatter(|n, _| format!("{:.3}°", n.to_degrees()))
-                        .custom_parser(|s| if let Ok(s) = s.parse::<f64>() { Some(s.to_radians()) } else { None })
+                        .step_by(1.0)                
+                        .drag_value_speed(1.0)
+                        .fixed_decimals(3)
                 )
                 .on_hover_text(hover_text);
-                if old_state != tx_antenna_beam_state.inner.elevation_beam_width_rad {
+                if old_state != tx_antenna_beam_state.inner.elevation_beam_width_deg {
                     self.transform_needs_update = true;
                 }
                 ui.end_row();
@@ -269,16 +282,17 @@ impl TxPanelWidget {
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
                 ui.label("Azimuth: ").on_hover_text(hover_text.clone());
-                old_state = tx_antenna_beam_state.inner.azimuth_beam_width_rad;
+                old_state = tx_antenna_beam_state.inner.azimuth_beam_width_deg;
                 ui.add(
-                    egui::Slider::new(&mut tx_antenna_beam_state.inner.azimuth_beam_width_rad, 0.0..=FRAC_PI_2)
+                    egui::Slider::new(&mut tx_antenna_beam_state.inner.azimuth_beam_width_deg, 0.0..=90.0)
+                        .suffix("°")
                         .smart_aim(false)
-                        .step_by(0.0)
-                        .custom_formatter(|n, _| format!("{:.3}°", n.to_degrees()))
-                        .custom_parser(|s| if let Ok(s) = s.parse::<f64>() { Some(s.to_radians()) } else { None })
+                        .step_by(1.0)                
+                        .drag_value_speed(1.0)
+                        .fixed_decimals(3)
                 )
                 .on_hover_text(hover_text);
-                if old_state != tx_antenna_beam_state.inner.azimuth_beam_width_rad {
+                if old_state != tx_antenna_beam_state.inner.azimuth_beam_width_deg {
                     self.transform_needs_update = true;
                 }
                 ui.end_row();
@@ -288,18 +302,25 @@ impl TxPanelWidget {
 
 // see: https://github.com/bevyengine/bevy/issues/4864
 fn update_tx(
+    // Resources
     tx_panel_widget: Res<TxPanelWidget>,
+    tx_antenna_state: Res<TxAntennaState>,
+    tx_antenna_beam_state: Res<TxAntennaBeamState>,
+    rx_carrier_state: Res<RxCarrierState>,
+    // Mutable resources
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut tx_carrier_state: ResMut<TxCarrierState>,
+    mut tx_antenna_beam_footprint_state: ResMut<TxAntennaBeamFootprintState>,
+    // Queries,
+    tx_antenna_beam_footprint_q: Query<&Mesh3d, (With<Tx>, With<AntennaBeamFootprint>)>,
+    tx_antenna_beam_elevation_line_q: Query<&Mesh3d, (With<Tx>, With<AntennaBeamElevationLine>)>,
+    tx_antenna_beam_azimuth_line_q: Query<&Mesh3d, (With<Tx>, With<AntennaBeamAzimuthLine>)>,
+    // Mutable queries
     mut tx_carrier_q: Query<(&mut Transform, &Children), (With<Tx>, With<Carrier>)>,
     mut tx_antenna_q: Query<(&mut Transform, &Children), (Without<Tx>, With<Antenna>)>,
     mut tx_antenna_beam_q: Query<&mut Transform, (Without<Tx>, Without<Antenna>, With<AntennaBeam>)>,
     mut tx_velocity_indicator_q: Query<&mut Transform, (Without<Tx>, Without<Antenna>, Without<AntennaBeam>, With<VelocityVector>)>,
-    mut tx_carrier_state: ResMut<TxCarrierState>,
-    tx_antenna_state: Res<TxAntennaState>,
-    tx_antenna_beam_state: Res<TxAntennaBeamState>,
-    // Antenna footprint mesh update
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut tx_antenna_beam_footprint_state: ResMut<TxAntennaBeamFootprintState>,
-    tx_antenna_beam_footprint_q: Query<&Mesh3d, (With<Tx>, With<AntennaBeamFootprint>)>
+    mut iso_range_ellipsoid_q: Query<&mut Transform, (Without<Tx>, Without<Antenna>, Without<AntennaBeam>, Without<VelocityVector>, With<IsoRangeEllipsoid>)>,
 ) {
     if !(tx_panel_widget.transform_needs_update  ||
          tx_panel_widget.velocity_indicator_needs_update) {
@@ -338,6 +359,31 @@ fn update_tx(
                                 mesh
                             );
                         }
+                    }
+                    // Update antenna beam elevation line mesh in the same time
+                    for mesh_handle in tx_antenna_beam_elevation_line_q.iter() {
+                        if let Some(mesh) = meshes.get_mut(mesh_handle) {
+                            update_antenna_beam_footprint_elevation_line_mesh_from_state(
+                                &tx_antenna_beam_footprint_state.inner,
+                                mesh
+                            );
+                        }
+                    }
+                    // Update antenna beam azimuth line mesh in the same time
+                    for mesh_handle in tx_antenna_beam_azimuth_line_q.iter() {
+                        if let Some(mesh) = meshes.get_mut(mesh_handle) {
+                            update_antenna_beam_footprint_azimuth_line_mesh_from_state(
+                                &tx_antenna_beam_footprint_state.inner,
+                                mesh
+                            );
+                        }
+                    }
+                    //Update iso-range ellipsoid transform
+                    for mut iso_range_ellipsoid_transform in iso_range_ellipsoid_q.iter_mut() {
+                        *iso_range_ellipsoid_transform = iso_range_ellipsoid_transform_from_state(
+                            &tx_carrier_state.inner.position_m, // OT in world frame
+                            &rx_carrier_state.inner.position_m  // OR in world frame
+                        );
                     }
                 }
             }

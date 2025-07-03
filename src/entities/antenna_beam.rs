@@ -1,5 +1,7 @@
-use bevy::prelude::*;
-use bevy::render::mesh::{ConeAnchor, ConeMeshBuilder};
+use bevy::{
+    prelude::*,
+    render::mesh::{ConeAnchor, ConeMeshBuilder}
+};
 
 use crate::constants::CONE_LENGTH;
 
@@ -10,8 +12,6 @@ pub fn spawn_antenna_beam(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
-    // elevation_beam_width_rad: f64,
-    // azimuth_beam_width_rad: f64,
     material: StandardMaterial,
 ) -> Entity {
     
