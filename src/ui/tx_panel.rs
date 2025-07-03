@@ -33,6 +33,7 @@ impl Plugin for TxPanelPlugin {
 pub struct TxPanelWidget {
     pub transform_needs_update: bool,
     pub velocity_indicator_needs_update: bool,
+    pub system_needs_update: bool,
 }
 
 impl Default for TxPanelWidget {
@@ -40,6 +41,7 @@ impl Default for TxPanelWidget {
         Self {
             transform_needs_update: false,
             velocity_indicator_needs_update: false,
+            system_needs_update: false,
         }
     }
 }
@@ -52,9 +54,9 @@ impl TxPanelWidget {
         tx_antenna_state: &mut TxAntennaState,
         tx_antenna_beam_state: &mut TxAntennaBeamState
     ) {
-        
         self.transform_needs_update = false;
         self.velocity_indicator_needs_update = false;
+        self.system_needs_update = false;
         let mut old_state = 0.0f64;
 
         ui.separator();
@@ -75,7 +77,7 @@ impl TxPanelWidget {
         egui::Grid::new("tx_carrier_grid")
             .num_columns(2)
             .striped(true)
-            .spacing([10.0, 5.0])
+            .spacing([20.0, 5.0])
             .show(ui, |ui| {
                 // ***** Carrier height ***** //
                 let hover_text = egui::RichText::new("Sets the Carrier's height relative to ground")
@@ -186,7 +188,7 @@ impl TxPanelWidget {
         egui::Grid::new("tx_antenna_orientation_grid")
             .num_columns(2)
             .striped(true)
-            .spacing([10.0, 5.0])
+            .spacing([20.0, 5.0])
             .show(ui, |ui| {
                 // ***** Antenna heading ***** //
                 let hover_text = egui::RichText::new("Sets the Antenna's heading angle:\n  -90° => left-looking\n    0° => forward-looking\n  +90° => right-looking\n ±180° => backward-looking\nnote: rotation along z-axis of Antenna's NED frame")
@@ -249,13 +251,14 @@ impl TxPanelWidget {
                 ui.end_row();
             });
 
+        ui.separator();
         ui.vertical_centered(|ui| ui.label("Beamwidth (half-power)"));
         ui.separator();
         // Antenna beamwidth settings
         egui::Grid::new("tx_antenna_beamwidth_grid")
             .num_columns(2)
             .striped(true)
-            .spacing([10.0, 5.0])
+            .spacing([20.0, 5.0])
             .show(ui, |ui| {
                 // ***** Antenna beamwidth elevation ***** //
                 let hover_text = egui::RichText::new("Sets the Antenna's elevation half-power beamwidth\nnote: elevation beamwidth angle is defined in the x-z plane of Antenna's NED frame")
@@ -294,6 +297,58 @@ impl TxPanelWidget {
                 .on_hover_text(hover_text);
                 if old_state != tx_antenna_beam_state.inner.azimuth_beam_width_deg {
                     self.transform_needs_update = true;
+                }
+                ui.end_row();
+            });
+        
+        ui.separator();
+        ui.vertical_centered(|ui| ui.label(
+            egui::RichText::new("SYSTEM").strong()
+        ));
+        ui.separator();
+        // Tx system settings
+        egui::Grid::new("tx_system_grid")
+            .num_columns(2)
+            .striped(true)
+            .spacing([1.0, 5.0])
+            .show(ui, |ui| {
+                // ***** Center frequency ***** //
+                let hover_text = egui::RichText::new("Sets the Center frequency of the system (0.1 - 100 GHz)")
+                    .color(egui::Color32::from_rgb(200, 200, 200))
+                    .monospace();
+                ui.label("Center Freq.: ").on_hover_text(hover_text.clone());
+                old_state = tx_carrier_state.center_frequency_ghz;
+                ui.add(
+                    egui::Slider::new(&mut tx_carrier_state.center_frequency_ghz, 0.1..=100.0)
+                        .suffix(" GHz")
+                        .smart_aim(false)
+                        .step_by(0.1)                
+                        .drag_value_speed(0.1)
+                        .fixed_decimals(3)
+                )
+                .on_hover_text(hover_text);
+                if old_state != tx_carrier_state.center_frequency_ghz {
+                    self.system_needs_update = true;
+                }
+                ui.end_row();
+
+                // ***** Bandwidth ***** //
+                let hover_text = egui::RichText::new("Sets the Bandwidth of the system (1 - 10000 MHz)")
+                    .color(egui::Color32::from_rgb(200, 200, 200))
+                    .monospace();
+                ui.label("Bandwidth: ").on_hover_text(hover_text.clone());
+                old_state = tx_carrier_state.bandwidth_mhz;
+                ui.add(
+                    egui::Slider::new(&mut tx_carrier_state.bandwidth_mhz, 1.0..=10000.0)
+                        .suffix(" MHz")
+                        .smart_aim(false)
+                        .step_by(1.0)                
+                        .drag_value_speed(1.0)
+                        .fixed_decimals(1)
+                )
+                .on_hover_text(hover_text);
+                if old_state != tx_carrier_state.bandwidth_mhz {
+                    self.system_needs_update = true;
                 }
                 ui.end_row();
             });

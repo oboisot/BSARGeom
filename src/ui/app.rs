@@ -84,8 +84,8 @@ fn ui_system(
     // Transmitter panel
     egui::SidePanel::left("Transmitter")
         .resizable(false)
-        .default_width(260.0)
-        .max_width(300.0)
+        .default_width(300.0)
+        .max_width(350.0)
         .show_separator_line(true)
         .show_animated(ctx, menu_widget.is_tx_panel_opened, |ui| {
             tx_panel_widget.ui(
@@ -99,8 +99,8 @@ fn ui_system(
     // Rceiver panel
     egui::SidePanel::right("Receiver")
         .resizable(false)
-        .default_width(260.0)
-        .max_width(300.0)
+        .default_width(300.0)
+        .max_width(350.0)
         .show_separator_line(true)
         .show_animated(ctx, menu_widget.is_rx_panel_opened, |ui| {
             rx_panel_widget.ui(

@@ -52,12 +52,12 @@ pub struct CarrierState {
     pub heading_deg: f64,
     pub elevation_deg: f64,
     pub bank_deg: f64,
-    // Carrier height
+    /// Carrier height
     pub height_m: f64,
-    // Carrier velocity
+    /// Carrier velocity
     pub velocity_mps: f64,
-    // Carrier position in World frame
-    pub position_m: DVec3
+    /// Carrier position in World frame
+    pub position_m: DVec3,
 }
 
 /// Struct to keep the internal state of the Antenna
