@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_egui::{EguiContexts, EguiPlugin, EguiPrimaryContextPass, egui};
+use bevy_egui::{egui, EguiContexts, EguiGlobalSettings, EguiPlugin, EguiPrimaryContextPass};
 use egui_extras;
 
 use crate::{
@@ -23,11 +23,17 @@ impl Plugin for AppPlugin {
     }
 }
 
-fn ui_setup(mut contexts: EguiContexts) -> Result {    
+fn ui_setup(
+    mut contexts: EguiContexts,
+    mut global_settings: ResMut<EguiGlobalSettings>
+) -> Result {
     let ctx = contexts.ctx_mut()?;
 
     // Install image loaders for egui
     egui_extras::install_image_loaders(&ctx); // This gives us image support
+
+    // Allow egui to absorb Bevy input events
+    global_settings.enable_absorb_bevy_input_system = true; // see: https://docs.rs/bevy_egui/latest/bevy_egui/struct.EguiGlobalSettings.html
 
     // UI style
     let mut dark_visuals = egui::Theme::Dark.default_visuals();
