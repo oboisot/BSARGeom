@@ -121,7 +121,7 @@ pub fn update_antenna_beam_footprint_mesh_from_state(
             // Update mesh with the new point
             mesh_pos[i] = [
                 point.x as f32,
-                point.y as f32,
+                0.05, // note: 0.05 in z-direction to be slightly above the ground plane (here Y axis)
                 point.z as f32
             ];
         }

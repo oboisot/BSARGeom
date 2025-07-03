@@ -81,7 +81,7 @@ impl RxPanelWidget {
             .spacing([20.0, 5.0])
             .show(ui, |ui| {
                 // ***** Carrier height ***** //
-                let hover_text = egui::RichText::new("Sets the Carrier's height relative to ground")
+                let hover_text = egui::RichText::new(format!("Sets the Carrier's height relative to ground (0 - {} m)", MAX_HEIGHT_M))
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
                 ui.label("Height: ").on_hover_text(hover_text.clone());
@@ -100,7 +100,7 @@ impl RxPanelWidget {
                 ui.end_row();
 
                 // ***** Carrier velocity ***** //
-                let hover_text = egui::RichText::new("Sets the Carrier's velocity")
+                let hover_text = egui::RichText::new(format!("Sets the Carrier's velocity (0 - {} m/s)", MAX_VELOCITY_MPS))
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
                 ui.label("Velocity: ").on_hover_text(hover_text.clone());
@@ -313,22 +313,69 @@ impl RxPanelWidget {
             .striped(true)
             .spacing([1.0, 5.0])
             .show(ui, |ui| {
-                // ***** Center frequency ***** //
-                let hover_text = egui::RichText::new("Sets the noise temperature of the Receiver's system (0 - 500 K)")
+                // ***** Noise temperature ***** //
+                let hover_text = egui::RichText::new("Sets the noise temperature of the Receiver's system (0 - 1000 K)")
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
                 ui.label("Noise temp.: ").on_hover_text(hover_text.clone());
                 old_state = rx_carrier_state.noise_temperature_k;
                 ui.add(
-                    egui::Slider::new(&mut rx_carrier_state.noise_temperature_k, 0.0..=500.0)
+                    egui::DragValue::new(&mut rx_carrier_state.noise_temperature_k)
+                        .update_while_editing(false)
+                        .speed(1.0)
+                        .range(0.0..=1000.0)
+                        .fixed_decimals(1)
                         .suffix(" K")
-                        .smart_aim(false)
-                        .step_by(1.0)                
-                        .drag_value_speed(1.0)
-                        .fixed_decimals(3)
                 )
                 .on_hover_text(hover_text);
                 if old_state != rx_carrier_state.noise_temperature_k {
+                    self.system_needs_update = true;
+                }
+                ui.end_row();
+
+                // ***** Noise factor ***** //
+                let hover_text = egui::RichText::new("Sets the receiver's noise factor (0 - 100 dB)")
+                    .color(egui::Color32::from_rgb(200, 200, 200))
+                    .monospace();
+                ui.label("Noise factor: ").on_hover_text(hover_text.clone());
+                old_state = rx_carrier_state.noise_factor_db;
+                ui.add(
+                    egui::DragValue::new(&mut rx_carrier_state.noise_factor_db)
+                        .update_while_editing(false)
+                        .speed(1.0)
+                        .range(0.0..=100.0)
+                        .fixed_decimals(1)
+                        .suffix(" dB")
+                )
+                .on_hover_text(hover_text);
+                if old_state != rx_carrier_state.noise_factor_db {
+                    self.system_needs_update = true;
+                }
+                ui.end_row();
+
+                // ***** Integration time ***** //
+                let hover_text = egui::RichText::new("Sets the receiver's integration time (0 - 100 s)")
+                    .color(egui::Color32::from_rgb(200, 200, 200))
+                    .monospace();
+                ui.label("Integration time: ").on_hover_text(hover_text.clone());
+                old_state = rx_carrier_state.integration_time_s;
+                ui.vertical(|ui| {
+                    ui.checkbox(
+                        &mut rx_carrier_state.integration_time_for_squared_ground_pixels,
+                        "Squared ground pixels",
+                    );
+                    ui.add_enabled(
+                        rx_carrier_state.integration_time_for_squared_ground_pixels,
+                        egui::DragValue::new(&mut rx_carrier_state.integration_time_s)
+                            .update_while_editing(false)
+                            .speed(1.0)
+                            .range(0.0..=100.0)
+                            .fixed_decimals(3)
+                            .suffix(" s")
+                    )
+                    .on_hover_text(hover_text);
+                });
+                if old_state != rx_carrier_state.integration_time_s {
                     self.system_needs_update = true;
                 }
                 ui.end_row();

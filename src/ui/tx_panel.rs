@@ -80,7 +80,7 @@ impl TxPanelWidget {
             .spacing([20.0, 5.0])
             .show(ui, |ui| {
                 // ***** Carrier height ***** //
-                let hover_text = egui::RichText::new("Sets the Carrier's height relative to ground")
+                let hover_text = egui::RichText::new(format!("Sets the Carrier's height relative to ground (0 - {} m)", MAX_HEIGHT_M))
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
                 ui.label("Height: ").on_hover_text(hover_text.clone());
@@ -98,8 +98,8 @@ impl TxPanelWidget {
                 }
                 ui.end_row();
 
-                // ***** Carrier veolcity ***** //
-                let hover_text = egui::RichText::new("Sets the Carrier's velocity")
+                // ***** Carrier velocity ***** //
+                let hover_text = egui::RichText::new(format!("Sets the Carrier's velocity (0 - {} m/s)", MAX_VELOCITY_MPS))
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
                 ui.label("Velocity: ").on_hover_text(hover_text.clone());
@@ -313,18 +313,18 @@ impl TxPanelWidget {
             .spacing([1.0, 5.0])
             .show(ui, |ui| {
                 // ***** Center frequency ***** //
-                let hover_text = egui::RichText::new("Sets the Center frequency of the system (0.1 - 100 GHz)")
+                let hover_text = egui::RichText::new("Sets the transmitted center frequency (0.1 - 100 GHz)")
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
                 ui.label("Center Freq.: ").on_hover_text(hover_text.clone());
                 old_state = tx_carrier_state.center_frequency_ghz;
                 ui.add(
-                    egui::Slider::new(&mut tx_carrier_state.center_frequency_ghz, 0.1..=100.0)
-                        .suffix(" GHz")
-                        .smart_aim(false)
-                        .step_by(0.1)                
-                        .drag_value_speed(0.1)
+                    egui::DragValue::new(&mut tx_carrier_state.center_frequency_ghz)
+                        .update_while_editing(false)
+                        .speed(0.1)
+                        .range(0.1..=100.0)
                         .fixed_decimals(3)
+                        .suffix(" GHz")
                 )
                 .on_hover_text(hover_text);
                 if old_state != tx_carrier_state.center_frequency_ghz {
@@ -333,21 +333,101 @@ impl TxPanelWidget {
                 ui.end_row();
 
                 // ***** Bandwidth ***** //
-                let hover_text = egui::RichText::new("Sets the Bandwidth of the system (1 - 10000 MHz)")
+                let hover_text = egui::RichText::new("Sets the transmitted bandwidth (1 - 10000 MHz)")
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
                 ui.label("Bandwidth: ").on_hover_text(hover_text.clone());
                 old_state = tx_carrier_state.bandwidth_mhz;
                 ui.add(
-                    egui::Slider::new(&mut tx_carrier_state.bandwidth_mhz, 1.0..=10000.0)
-                        .suffix(" MHz")
-                        .smart_aim(false)
-                        .step_by(1.0)                
-                        .drag_value_speed(1.0)
+                    egui::DragValue::new(&mut tx_carrier_state.bandwidth_mhz)
+                        .update_while_editing(false)
+                        .speed(1.0)
+                        .range(1.0..=10000.0)
                         .fixed_decimals(1)
+                        .suffix(" MHz")
                 )
                 .on_hover_text(hover_text);
                 if old_state != tx_carrier_state.bandwidth_mhz {
+                    self.system_needs_update = true;
+                }
+                ui.end_row();
+
+                // ***** Pulse duration ***** //
+                let hover_text = egui::RichText::new("Sets the transmitted pulse duration (0 - 1000000 µs)")
+                    .color(egui::Color32::from_rgb(200, 200, 200))
+                    .monospace();
+                ui.label("Pulse Dur.: ").on_hover_text(hover_text.clone());
+                old_state = tx_carrier_state.pulse_duration_us;
+                ui.add(
+                    egui::DragValue::new(&mut tx_carrier_state.pulse_duration_us)
+                        .update_while_editing(false)
+                        .speed(10.0)
+                        .range(0.0..=1000000.0)
+                        .fixed_decimals(1)
+                        .suffix(" µs")
+                )
+                .on_hover_text(hover_text);
+                if old_state != tx_carrier_state.pulse_duration_us {
+                    self.system_needs_update = true;
+                }
+                ui.end_row();
+
+                // ***** PRF ***** //
+                let hover_text = egui::RichText::new("Sets the Pulse Repetition Frequency (PRF) of the transmitter (1 - 1000000 Hz)")
+                    .color(egui::Color32::from_rgb(200, 200, 200))
+                    .monospace();
+                ui.label("PRF: ").on_hover_text(hover_text.clone());
+                old_state = tx_carrier_state.prf_hz;
+                ui.add(
+                    egui::DragValue::new(&mut tx_carrier_state.prf_hz)
+                        .update_while_editing(false)
+                        .speed(1.0)
+                        .range(1.0..=1000000.0)
+                        .fixed_decimals(1)
+                        .suffix(" Hz")
+                )
+                .on_hover_text(hover_text);
+                if old_state != tx_carrier_state.prf_hz {
+                    self.system_needs_update = true;
+                }
+                ui.end_row();
+
+                // ***** Peak power ***** //
+                let hover_text = egui::RichText::new("Sets the transmitted peak power (0 - 10000 W)")
+                    .color(egui::Color32::from_rgb(200, 200, 200))
+                    .monospace();
+                ui.label("Peak Power: ").on_hover_text(hover_text.clone());
+                old_state = tx_carrier_state.peak_power_w;
+                ui.add(
+                    egui::DragValue::new(&mut tx_carrier_state.peak_power_w)
+                        .update_while_editing(false)
+                        .speed(1.0)
+                        .range(1.0..=10000.0)
+                        .fixed_decimals(1)
+                        .suffix(" W")
+                )
+                .on_hover_text(hover_text);
+                if old_state != tx_carrier_state.peak_power_w {
+                    self.system_needs_update = true;
+                }
+                ui.end_row();
+
+                // ***** Loss factor ***** //
+                let hover_text = egui::RichText::new("Sets the transmission loss factor (0 - 100 dB)")
+                    .color(egui::Color32::from_rgb(200, 200, 200))
+                    .monospace();
+                ui.label("Loss Factor: ").on_hover_text(hover_text.clone());
+                old_state = tx_carrier_state.loss_factor_db;
+                ui.add(
+                    egui::DragValue::new(&mut tx_carrier_state.loss_factor_db)
+                        .update_while_editing(false)
+                        .speed(0.1)
+                        .range(0.0..=100.0)
+                        .fixed_decimals(1)
+                        .suffix(" dB")
+                )
+                .on_hover_text(hover_text);
+                if old_state != tx_carrier_state.loss_factor_db {
                     self.system_needs_update = true;
                 }
                 ui.end_row();

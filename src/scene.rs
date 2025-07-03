@@ -41,7 +41,7 @@ pub struct TxCarrierState {
     pub center_frequency_ghz: f64, // Center frequency of the carrier
     pub bandwidth_mhz: f64, // Bandwidth of the carrier
     pub pulse_duration_us: f64, // Pulse duration of the carrier
-    pub pulse_repetition_frequency_hz: f64, // Pulse repetition frequency of the carrier
+    pub prf_hz: f64, // Pulse repetition frequency of the carrier
     pub peak_power_w: f64, // Peak power of the carrier
     pub loss_factor_db: f64, // Loss factor of the carrier
 }
@@ -60,7 +60,7 @@ impl Default for TxCarrierState {
             center_frequency_ghz: 10.0,
             bandwidth_mhz: 800.0,
             pulse_duration_us: 10.0,
-            pulse_repetition_frequency_hz: 10000.0,
+            prf_hz: 10000.0,
             peak_power_w: 250.0,
             loss_factor_db: 3.0,
         }
@@ -126,7 +126,8 @@ pub struct RxCarrierState {
     pub inner: CarrierState,
     pub noise_temperature_k: f64,
     pub noise_factor_db: f64,
-    pub integration_time_s: Option<f64>,
+    pub integration_time_s: f64,
+    pub integration_time_for_squared_ground_pixels: bool, // true if integration time is set to have "squared ground pixels"
 }
 
 impl Default for RxCarrierState {
@@ -142,7 +143,8 @@ impl Default for RxCarrierState {
             },
             noise_temperature_k: 290.0,
             noise_factor_db: 5.0,
-            integration_time_s: None // None means integration time is set to have "squared ground pixels"
+            integration_time_s: 0.0,
+            integration_time_for_squared_ground_pixels: true
         }
     }
 }
