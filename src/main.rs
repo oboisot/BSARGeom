@@ -3,8 +3,10 @@
 use bevy::prelude::*;
 use bevy_panorbit_camera::PanOrbitCameraPlugin;
 
+pub mod bsar;
 pub mod camera;
 pub mod constants;
+pub mod coordinates;
 pub mod entities;
 pub mod scene;
 pub mod ui;

@@ -56,6 +56,7 @@ impl Default for TxCarrierState {
                 height_m: 3000.0,
                 velocity_mps: 120.0,
                 position_m: DVec3::ZERO,
+                velocity_vector_mps: DVec3::ZERO,
             },
             center_frequency_ghz: 10.0,
             bandwidth_mhz: 800.0,
@@ -139,7 +140,8 @@ impl Default for RxCarrierState {
                 bank_deg: 0.0,
                 height_m: 1000.0,
                 velocity_mps: 36.0,
-                position_m: DVec3::ZERO
+                position_m: DVec3::ZERO,
+                velocity_vector_mps: DVec3::ZERO,
             },
             noise_temperature_k: 290.0,
             noise_factor_db: 5.0,

@@ -1,5 +1,5 @@
 [package]
-name = "bsar_geom"
+name = "bsargeom"
 version = "0.1.0"
 edition = "2024"
 

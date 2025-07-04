@@ -58,6 +58,8 @@ pub struct CarrierState {
     pub velocity_mps: f64,
     /// Carrier position in World frame
     pub position_m: DVec3,
+    /// Carrier velocity vector in World frame
+    pub velocity_vector_mps: DVec3,
 }
 
 /// Struct to keep the internal state of the Antenna
@@ -301,20 +303,18 @@ pub fn velocity_indicator_transform_from_state(
     carrier_state: &CarrierState
 ) -> Transform {
     let x = carrier_state.velocity_mps;
-    if x <= 150.0 { // = CARRIER_SIZE
+    let scale = if x <= 150.0 { // = CARRIER_SIZE
         let length = 150.0 * x.ln_1p() / 150.0f64.ln_1p() ;// logarithmic growth: F(x) = ymax * ln(1 + x) / ln(1 + xmax)
-        Transform {
-            translation: Vec3::ZERO,
-            rotation: POS_YAXIS_TO_XAXIS, // Rotate to align with X-axis
-            scale: Vec3::new(1.0, length as f32, 1.0)
-        }
+        Vec3::new(1.0, length as f32, 1.0)
     } else {
         let length = 0.08542713567839195 * (x - 150.0) + 150.0; // linear growth (note max length for vmax=10_000m/s is 1000.0)
         let scale = 0.00047058823529411766 * x + 1.0294117647058825; // linear growth of the cylinder radius
-        Transform {
-            translation: Vec3::ZERO,
-            rotation: POS_YAXIS_TO_XAXIS, // Rotate to align with X-axis
-            scale: Vec3::new(scale as f32, length as f32, scale as f32)
-        }
+        Vec3::new(scale as f32, length as f32, scale as f32)
+    };
+
+    Transform {
+        translation: Vec3::ZERO,
+        rotation: POS_YAXIS_TO_XAXIS, // Rotate to align with X-axis
+        scale
     }
 }
