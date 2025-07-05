@@ -6,6 +6,8 @@ pub use antenna_beam_footprint::{
     AntennaBeamFootprintState,
     spawn_antenna_beam_footprint,
     update_antenna_beam_footprint_mesh_from_state,
+    update_ground_angular_velocity,
+    update_illumination_time,
     spawn_antenna_beam_footprint_elevation_line,
     update_antenna_beam_footprint_elevation_line_mesh_from_state,
     spawn_antenna_beam_footprint_azimuth_line,
@@ -23,7 +25,8 @@ pub use carrier::{
     antenna_beam_transform_from_state,
     antenna_transform_from_state,
     carrier_transform_from_state, spawn_carrier,
-    velocity_indicator_transform_from_state
+    velocity_indicator_transform_from_state,
+    update_velocity_vector
 };
 
 mod grid_helper;

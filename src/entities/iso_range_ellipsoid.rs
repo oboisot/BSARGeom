@@ -17,8 +17,9 @@ pub fn spawn_iso_range_ellipsoid(
         sphere: Sphere { 
             radius: 1.0
         },
-        kind: SphereKind::Ico {
-            subdivisions: 16
+        kind: SphereKind::Uv {
+            sectors: 128,
+            stacks: 128,
         }
     };
 

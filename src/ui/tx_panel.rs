@@ -4,18 +4,21 @@ use bevy_egui::egui;
 use crate::{
     constants::{MAX_HEIGHT_M, MAX_VELOCITY_MPS},
     entities::{
-        Antenna, AntennaBeam, AntennaBeamFootprint, AntennaBeamElevationLine, AntennaBeamAzimuthLine,
-        Carrier, VelocityVector,
         antenna_beam_transform_from_state, antenna_transform_from_state,
-        carrier_transform_from_state, velocity_indicator_transform_from_state,
+        carrier_transform_from_state,
         iso_range_ellipsoid_transform_from_state,
-        update_antenna_beam_footprint_mesh_from_state,
+        update_antenna_beam_footprint_azimuth_line_mesh_from_state,
         update_antenna_beam_footprint_elevation_line_mesh_from_state,
-        update_antenna_beam_footprint_azimuth_line_mesh_from_state
+        update_antenna_beam_footprint_mesh_from_state,
+        update_ground_angular_velocity,
+        update_illumination_time,
+        update_velocity_vector,
+        velocity_indicator_transform_from_state,
+        Antenna, AntennaBeam, AntennaBeamAzimuthLine, AntennaBeamElevationLine, AntennaBeamFootprint,
+        Carrier, VelocityVector
     },
     scene::{
-        Tx, TxCarrierState, TxAntennaState, TxAntennaBeamState, TxAntennaBeamFootprintState,
-        RxCarrierState, IsoRangeEllipsoid
+        IsoRangeEllipsoid, RxCarrierState, Tx, TxAntennaBeamFootprintState, TxAntennaBeamState, TxAntennaState, TxCarrierState
     },
 };
 
@@ -527,6 +530,18 @@ fn update_tx(
                     // Update velocity vector transform
                     *velocity_indicator_transform = velocity_indicator_transform_from_state(
                         &tx_carrier_state.inner
+                    );
+                    // Update carrier velocity vector in the same time (here direction does not change, only magnitude)
+                    update_velocity_vector(&mut tx_carrier_state.inner);
+                    // Update ground angular velocity only
+                    update_ground_angular_velocity(
+                        &tx_carrier_state.inner,
+                        &mut tx_antenna_beam_footprint_state.inner,
+                    );
+                    // Update illumination time
+                    update_illumination_time(
+                        &tx_carrier_state.inner,
+                        &mut tx_antenna_beam_footprint_state.inner,
                     );
                 }
             }

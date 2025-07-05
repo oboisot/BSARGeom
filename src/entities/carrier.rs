@@ -6,14 +6,16 @@ use bevy::{
 use crate::{
     constants::{
         ANTENNA_SIZE, CARRIER_SIZE, CONE_LENGTH,
-        ENU_TO_NED_F64, NEG_YAXIS_TO_XAXIS, POS_YAXIS_TO_XAXIS, TO_Y_UP
+        ENU_TO_NED_F64, NEG_YAXIS_TO_XAXIS, POS_YAXIS_TO_XAXIS, TO_Y_UP,
     },
     entities::{
-        AntennaBeamFootprintState,
-        spawn_antenna_beam, spawn_axes_helper, spawn_velocity_indicator,
+        spawn_antenna_beam,
         spawn_antenna_beam_footprint,
+        spawn_antenna_beam_footprint_azimuth_line,
         spawn_antenna_beam_footprint_elevation_line,
-        spawn_antenna_beam_footprint_azimuth_line
+        spawn_axes_helper,
+        spawn_velocity_indicator,
+        AntennaBeamFootprintState
     }
 };
 
@@ -56,9 +58,9 @@ pub struct CarrierState {
     pub height_m: f64,
     /// Carrier velocity
     pub velocity_mps: f64,
-    /// Carrier position in World frame
+    /// Carrier position in World frame (Z-up)
     pub position_m: DVec3,
-    /// Carrier velocity vector in World frame
+    /// Carrier velocity vector in World frame (Z-up)
     pub velocity_vector_mps: DVec3,
 }
 
@@ -221,7 +223,7 @@ pub fn carrier_transform_from_state(
         carrier_state.heading_deg.to_radians(),
         carrier_state.elevation_deg.to_radians(),
         carrier_state.bank_deg.to_radians()
-    );    
+    );
     // Antenna rotation relative to Carrier
     let antenna_rotation = DQuat::from_euler(
         EulerRot::ZYX,
@@ -242,12 +244,19 @@ pub fn carrier_transform_from_state(
         0.0
     };
 
-    // Update carrier position in CarrierState
+    // Update carrier position in World frame (Z-up)
     carrier_state.position_m = DVec3::new(
         t * ax.x,
         t * ax.y,
         carrier_state.height_m
     );
+    // Update carrier velocity vector in World frame (Z-up)
+    carrier_state.velocity_vector_mps =
+        carrier_rotation * DVec3::new(
+            carrier_state.velocity_mps, // Carrier velocity follows x-axis in Carrier NED frame
+            0.0,
+            0.0
+        );
 
     Transform {
         translation: TO_Y_UP * Vec3::new( // Transforms from Z-up to Y-up
@@ -317,4 +326,24 @@ pub fn velocity_indicator_transform_from_state(
         rotation: POS_YAXIS_TO_XAXIS, // Rotate to align with X-axis
         scale
     }
+}
+
+/// Updates the carrier velocity vector based on the current carrier state.
+pub fn update_velocity_vector(
+    carrier_state: &mut CarrierState
+) {
+    // Carrier rotation from ENU to NED frame + orientation
+    let carrier_rotation = ENU_TO_NED_F64 * DQuat::from_euler(
+        EulerRot::ZYX,
+        carrier_state.heading_deg.to_radians(),
+        carrier_state.elevation_deg.to_radians(),
+        carrier_state.bank_deg.to_radians()
+    );
+    // Update carrier velocity vector in World frame (Z-up)
+    carrier_state.velocity_vector_mps =
+        carrier_rotation * DVec3::new(
+            carrier_state.velocity_mps, // Carrier velocity follows x-axis in Carrier NED frame
+            0.0,
+            0.0
+        );
 }
