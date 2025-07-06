@@ -4,10 +4,13 @@ use egui_extras;
 
 use crate::{
     scene::{
-        TxCarrierState, TxAntennaState, TxAntennaBeamState,
-        RxCarrierState, RxAntennaState, RxAntennaBeamState
+        TxCarrierState, TxAntennaState, TxAntennaBeamState, TxAntennaBeamFootprintState,
+        RxCarrierState, RxAntennaState, RxAntennaBeamState, RxAntennaBeamFootprintState
     },
-    ui::{MenuPlugin, MenuWidget, TxPanelPlugin, TxPanelWidget, RxPanelPlugin, RxPanelWidget}
+    ui::{
+        infos_ui,
+        MenuPlugin, MenuWidget, TxPanelPlugin, TxPanelWidget, RxPanelPlugin, RxPanelWidget
+    }
 };
 
 pub struct AppPlugin;
@@ -63,10 +66,12 @@ fn ui_system(
     mut tx_carrier_state: ResMut<TxCarrierState>,
     mut tx_antenna_state: ResMut<TxAntennaState>,
     mut tx_antenna_beam_state: ResMut<TxAntennaBeamState>,
+    tx_antenna_beam_footprint_state: Res<TxAntennaBeamFootprintState>,
     // Rx state resources
     mut rx_carrier_state: ResMut<RxCarrierState>,
     mut rx_antenna_state: ResMut<RxAntennaState>,
-    mut rx_antenna_beam_state: ResMut<RxAntennaBeamState>
+    mut rx_antenna_beam_state: ResMut<RxAntennaBeamState>,
+    rx_antenna_beam_footprint_state: Res<RxAntennaBeamFootprintState>,
 ) -> Result {
     let ctx = contexts.ctx_mut()?;
 
@@ -85,7 +90,7 @@ fn ui_system(
     egui::SidePanel::left("Transmitter")
         .resizable(false)
         .default_width(300.0)
-        .max_width(320.0)
+        .max_width(300.0)
         .show_separator_line(true)
         .show_animated(ctx, menu_widget.is_tx_panel_opened, |ui| {
             tx_panel_widget.ui(
@@ -100,7 +105,7 @@ fn ui_system(
     egui::SidePanel::right("Receiver")
         .resizable(false)
         .default_width(300.0)
-        .max_width(320.0)
+        .max_width(300.0)
         .show_separator_line(true)
         .show_animated(ctx, menu_widget.is_rx_panel_opened, |ui| {
             rx_panel_widget.ui(
@@ -110,6 +115,52 @@ fn ui_system(
                 &mut rx_antenna_beam_state
             );
         });
+    
+    // Tx Infos
+    let tx_infos_window = egui::Window::new("TRANSMITTER Infos")
+        .resizable(false)
+        .constrain(false)
+        .collapsible(true)
+        .title_bar(true)
+        .enabled(true)
+        .anchor(
+            egui::Align2::LEFT_TOP,
+            if menu_widget.is_tx_panel_opened {
+                egui::Vec2::new(348.0, 0.0)
+            } else {
+                egui::Vec2::new(48.0, 0.0)
+            }
+        );
+    tx_infos_window.show(ctx, |ui| {
+        infos_ui(
+            ui,
+            &tx_carrier_state.inner,
+            &tx_antenna_beam_footprint_state.inner
+        );
+    });
+
+    // Rx Infos
+    let tx_infos_window = egui::Window::new("RECEIVER Infos")
+        .resizable(false)
+        .constrain(false)
+        .collapsible(true)
+        .title_bar(true)
+        .enabled(true)
+        .anchor(
+            egui::Align2::RIGHT_TOP,
+            if menu_widget.is_rx_panel_opened {
+                egui::Vec2::new(-300.0, 0.0)
+            } else {
+                egui::Vec2::new(0.0, 0.0)
+            }            
+        );
+    tx_infos_window.show(ctx, |ui| {
+        infos_ui(
+            ui,
+            &rx_carrier_state.inner,
+            &rx_antenna_beam_footprint_state.inner
+        );
+    });
     
     Ok(())
 }

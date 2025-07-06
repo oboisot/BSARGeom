@@ -121,7 +121,7 @@ impl TxPanelWidget {
                 ui.end_row();
 
                 // ***** Carrier heading ***** //
-                let hover_text = egui::RichText::new("Sets the Carrier's heading angle:\n    0° => North\n   90° => East\n  180° => South\n  270° => West\nnote: rotation along z-axis of Carrier's NED frame")
+                let hover_text = egui::RichText::new("Sets the Carrier's heading angle (0 - 360°):\n    0° => North\n   90° => East\n  180° => South\n  270° => West\nnote: rotation along z-axis of Carrier's NED frame")
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
                 ui.label("Heading: ").on_hover_text(hover_text.clone());
@@ -130,7 +130,7 @@ impl TxPanelWidget {
                     egui::Slider::new(&mut tx_carrier_state.inner.heading_deg, 0.0..=360.0)
                         .suffix("°")
                         .smart_aim(false)
-                        .step_by(1.0)                
+                        .step_by(0.0)                
                         .drag_value_speed(1.0)
                         .fixed_decimals(3)
                 ).on_hover_text(hover_text);
@@ -140,7 +140,7 @@ impl TxPanelWidget {
                 ui.end_row();
 
                 // ***** Carrier elevation ***** //
-                let hover_text = egui::RichText::new("Sets the Carrier's elevation angle:\n  -90° => nadir-looking\n    0° => horizontal-looking\n  +90° => sky-looking\nnote: rotation along y-axis of Carrier's NED frame")
+                let hover_text = egui::RichText::new("Sets the Carrier's elevation angle (-90 - 90°):\n  -90° => nadir-looking\n    0° => horizontal-looking\n  +90° => sky-looking\nnote: rotation along y-axis of Carrier's NED frame")
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
                 ui.label("Elevation: ").on_hover_text(hover_text.clone());
@@ -149,7 +149,7 @@ impl TxPanelWidget {
                     egui::Slider::new(&mut tx_carrier_state.inner.elevation_deg, -90.0..=90.0)
                         .suffix("°")
                         .smart_aim(false)
-                        .step_by(1.0)                
+                        .step_by(0.0)                
                         .drag_value_speed(1.0)
                         .fixed_decimals(3)
                 ).on_hover_text(hover_text);
@@ -159,7 +159,7 @@ impl TxPanelWidget {
                 ui.end_row();
 
                 // ***** Carrier bank ***** //
-                let hover_text = egui::RichText::new("Sets the Carrier's bank angle:\n  -90° => left wing down\n    0° => horizontal wings\n  +90° => right wing down\nnote: rotation along x-axis of Carrier's NED frame")
+                let hover_text = egui::RichText::new("Sets the Carrier's bank angle (-90 - 90°):\n  -90° => left wing down\n    0° => horizontal wings\n  +90° => right wing down\nnote: rotation along x-axis of Carrier's NED frame")
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
                 ui.label("Bank: ").on_hover_text(hover_text.clone());
@@ -168,7 +168,7 @@ impl TxPanelWidget {
                     egui::Slider::new(&mut tx_carrier_state.inner.bank_deg, -90.0..=90.0)
                         .suffix("°")
                         .smart_aim(false)
-                        .step_by(1.0)                
+                        .step_by(0.0)                
                         .drag_value_speed(1.0)
                         .fixed_decimals(3)
                 ).on_hover_text(hover_text);
@@ -194,7 +194,7 @@ impl TxPanelWidget {
             .spacing([20.0, 5.0])
             .show(ui, |ui| {
                 // ***** Antenna heading ***** //
-                let hover_text = egui::RichText::new("Sets the Antenna's heading angle:\n  -90° => left-looking\n    0° => forward-looking\n  +90° => right-looking\n ±180° => backward-looking\nnote: rotation along z-axis of Antenna's NED frame")
+                let hover_text = egui::RichText::new("Sets the Antenna's heading angle(-180 - 180°):\n  -90° => left-looking\n    0° => forward-looking\n  +90° => right-looking\n ±180° => backward-looking\nnote: rotation along z-axis of Antenna's NED frame")
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
                 ui.label("Heading: ").on_hover_text(hover_text.clone());
@@ -203,7 +203,7 @@ impl TxPanelWidget {
                     egui::Slider::new(&mut tx_antenna_state.inner.heading_deg, -180.0..=180.0)
                         .suffix("°")
                         .smart_aim(false)
-                        .step_by(1.0)                
+                        .step_by(0.0)                
                         .drag_value_speed(1.0)
                         .fixed_decimals(3)
                 )
@@ -214,7 +214,7 @@ impl TxPanelWidget {
                 ui.end_row();
 
                 // ***** Antenna elevation ***** //
-                let hover_text = egui::RichText::new("Sets the Antenna's elevation angle:\n  -90° => vertical-looking\n    0° => horizontal-looking\nnote: rotation along y-axis of Antenna's NED frame")
+                let hover_text = egui::RichText::new("Sets the Antenna's elevation angle(-90 - 0°):\n  -90° => vertical-looking\n    0° => horizontal-looking\nnote: rotation along y-axis of Antenna's NED frame")
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
                 ui.label("Elevation: ").on_hover_text(hover_text.clone());
@@ -223,7 +223,7 @@ impl TxPanelWidget {
                     egui::Slider::new(&mut tx_antenna_state.inner.elevation_deg, -90.0..=0.0)
                         .suffix("°")
                         .smart_aim(false)
-                        .step_by(1.0)                
+                        .step_by(0.0)                
                         .drag_value_speed(1.0)
                         .fixed_decimals(3)
                 )
@@ -234,7 +234,7 @@ impl TxPanelWidget {
                 ui.end_row();
 
                 // ***** Antenna bank ***** //
-                let hover_text = egui::RichText::new("Sets the Antenna's bank angle\nnote: rotation along x-axis of Antenna's NED frame")
+                let hover_text = egui::RichText::new("Sets the Antenna's bank angle (-90 - 90°)\nnote: rotation along x-axis of Antenna's NED frame")
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
                 ui.label("Bank: ").on_hover_text(hover_text.clone());
@@ -243,7 +243,7 @@ impl TxPanelWidget {
                     egui::Slider::new(&mut tx_antenna_state.inner.bank_deg, -90.0..=90.0)
                         .suffix("°")
                         .smart_aim(false)
-                        .step_by(1.0)                
+                        .step_by(0.0)                
                         .drag_value_speed(1.0)
                         .fixed_decimals(3)
                 )
@@ -264,7 +264,7 @@ impl TxPanelWidget {
             .spacing([20.0, 5.0])
             .show(ui, |ui| {
                 // ***** Antenna beamwidth elevation ***** //
-                let hover_text = egui::RichText::new("Sets the Antenna's elevation half-power beamwidth\nnote: elevation beamwidth angle is defined in the x-z plane of Antenna's NED frame")
+                let hover_text = egui::RichText::new("Sets the Antenna's elevation half-power beamwidth (0 - 90°)\nnote: elevation beamwidth angle is defined in the x-z plane of Antenna's NED frame")
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
                 ui.label("Elevation: ").on_hover_text(hover_text.clone());
@@ -273,7 +273,7 @@ impl TxPanelWidget {
                     egui::Slider::new(&mut tx_antenna_beam_state.inner.elevation_beam_width_deg, 0.0..=90.0)
                         .suffix("°")
                         .smart_aim(false)
-                        .step_by(1.0)                
+                        .step_by(0.0)                
                         .drag_value_speed(1.0)
                         .fixed_decimals(3)
                 )
@@ -284,7 +284,7 @@ impl TxPanelWidget {
                 ui.end_row();
 
                 // ***** Antenna azimuth ***** //
-                let hover_text = egui::RichText::new("Sets the Antenna's azimuth half-power beamwidth\nnote: azimuth beamwidth angle is defined in the x-y plane of Antenna's NED frame")
+                let hover_text = egui::RichText::new("Sets the Antenna's azimuth half-power beamwidth (0 - 90°)\nnote: azimuth beamwidth angle is defined in the x-y plane of Antenna's NED frame")
                     .color(egui::Color32::from_rgb(200, 200, 200))
                     .monospace();
                 ui.label("Azimuth: ").on_hover_text(hover_text.clone());
@@ -293,7 +293,7 @@ impl TxPanelWidget {
                     egui::Slider::new(&mut tx_antenna_beam_state.inner.azimuth_beam_width_deg, 0.0..=90.0)
                         .suffix("°")
                         .smart_aim(false)
-                        .step_by(1.0)                
+                        .step_by(0.0)                
                         .drag_value_speed(1.0)
                         .fixed_decimals(3)
                 )
