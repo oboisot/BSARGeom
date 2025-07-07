@@ -48,10 +48,10 @@ fn ui_setup(
     dark_visuals.widgets.hovered.corner_radius = egui::CornerRadius::ZERO;
     dark_visuals.widgets.active.corner_radius = egui::CornerRadius::ZERO;
     dark_visuals.widgets.open.corner_radius = egui::CornerRadius::ZERO;
-    //
-    dark_visuals.slider_trailing_fill = true; // Fill the slider trailing area
+    // Fill the slider trailing area
+    dark_visuals.slider_trailing_fill = true;
     // Alternate background color for striped tables
-    dark_visuals.faint_bg_color = egui::Color32::from_gray(0);
+    dark_visuals.faint_bg_color = egui::Color32::BLACK; // Use black for faint background color
     ctx.set_visuals_of(egui::Theme::Dark, dark_visuals);
 
     Ok(())
