@@ -81,7 +81,7 @@ impl RxPanelWidget {
         // Carrier heading angle
         egui::Grid::new("rx_carrier_grid")
             .num_columns(2)
-            .striped(true)
+            .striped(false)
             .spacing([20.0, 5.0])
             .show(ui, |ui| {
                 // ***** Carrier height ***** //
@@ -192,7 +192,7 @@ impl RxPanelWidget {
 
         egui::Grid::new("rx_antenna_orientation_grid")
             .num_columns(2)
-            .striped(true)
+            .striped(false)
             .spacing([20.0, 5.0])
             .show(ui, |ui| {
                 // ***** Antenna heading ***** //
@@ -262,7 +262,7 @@ impl RxPanelWidget {
         // Antenna beamwidth settings
         egui::Grid::new("rx_antenna_beamwidth_grid")
             .num_columns(2)
-            .striped(true)
+            .striped(false)
             .spacing([20.0, 5.0])
             .show(ui, |ui| {
                 // ***** Antenna beamwidth elevation ***** //
@@ -314,7 +314,7 @@ impl RxPanelWidget {
         // Tx system settings
         egui::Grid::new("rx_system_grid")
             .num_columns(2)
-            .striped(true)
+            .striped(false)
             .spacing([1.0, 5.0])
             .show(ui, |ui| {
                 // ***** Noise temperature ***** //

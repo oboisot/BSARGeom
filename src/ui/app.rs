@@ -50,6 +50,8 @@ fn ui_setup(
     dark_visuals.widgets.open.corner_radius = egui::CornerRadius::ZERO;
     //
     dark_visuals.slider_trailing_fill = true; // Fill the slider trailing area
+    // Alternate background color for striped tables
+    dark_visuals.faint_bg_color = egui::Color32::from_gray(0);
     ctx.set_visuals_of(egui::Theme::Dark, dark_visuals);
 
     Ok(())
@@ -117,7 +119,7 @@ fn ui_system(
         });
     
     // Tx Infos
-    let tx_infos_window = egui::Window::new("TRANSMITTER Infos")
+    let tx_infos_window = egui::Window::new("Tx Infos")
         .resizable(false)
         .constrain(false)
         .collapsible(true)
@@ -135,12 +137,13 @@ fn ui_system(
         infos_ui(
             ui,
             &tx_carrier_state.inner,
-            &tx_antenna_beam_footprint_state.inner
+            &tx_antenna_beam_footprint_state.inner,
+            "tx"
         );
     });
 
     // Rx Infos
-    let tx_infos_window = egui::Window::new("RECEIVER Infos")
+    let tx_infos_window = egui::Window::new("Rx Infos")
         .resizable(false)
         .constrain(false)
         .collapsible(true)
@@ -158,7 +161,8 @@ fn ui_system(
         infos_ui(
             ui,
             &rx_carrier_state.inner,
-            &rx_antenna_beam_footprint_state.inner
+            &rx_antenna_beam_footprint_state.inner,
+            "rx"
         );
     });
     

@@ -79,7 +79,7 @@ impl TxPanelWidget {
         // Carrier settings
         egui::Grid::new("tx_carrier_grid")
             .num_columns(2)
-            .striped(true)
+            .striped(false)
             .spacing([20.0, 5.0])
             .show(ui, |ui| {
                 // ***** Carrier height ***** //
@@ -190,7 +190,7 @@ impl TxPanelWidget {
         
         egui::Grid::new("tx_antenna_orientation_grid")
             .num_columns(2)
-            .striped(true)
+            .striped(false)
             .spacing([20.0, 5.0])
             .show(ui, |ui| {
                 // ***** Antenna heading ***** //
@@ -260,7 +260,7 @@ impl TxPanelWidget {
         // Antenna beamwidth settings
         egui::Grid::new("tx_antenna_beamwidth_grid")
             .num_columns(2)
-            .striped(true)
+            .striped(false)
             .spacing([20.0, 5.0])
             .show(ui, |ui| {
                 // ***** Antenna beamwidth elevation ***** //
@@ -312,7 +312,7 @@ impl TxPanelWidget {
         // Tx system settings
         egui::Grid::new("tx_system_grid")
             .num_columns(2)
-            .striped(true)
+            .striped(false)
             .spacing([1.0, 5.0])
             .show(ui, |ui| {
                 // ***** Center frequency ***** //
