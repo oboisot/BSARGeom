@@ -41,7 +41,6 @@ fn spawn_camera(mut commands: Commands) {
             zoom_sensitivity: 1.0,
             // Allow the camera to go upside down
             allow_upside_down: false,
-            // Set the camera's up direction to Z-up. See: https://github.com/Plonq/bevy_panorbit_camera/blob/master/examples/swapped_axis.rs
             ..default()
         },
         Msaa::default(), // MSAA,

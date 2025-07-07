@@ -8,7 +8,7 @@ use crate::{
         RxCarrierState, RxAntennaState, RxAntennaBeamState, RxAntennaBeamFootprintState
     },
     ui::{
-        infos_ui,
+        carrier_infos_ui,
         MenuPlugin, MenuWidget, TxPanelPlugin, TxPanelWidget, RxPanelPlugin, RxPanelWidget
     }
 };
@@ -134,7 +134,7 @@ fn ui_system(
             }
         );
     tx_infos_window.show(ctx, |ui| {
-        infos_ui(
+        carrier_infos_ui(
             ui,
             &tx_carrier_state.inner,
             &tx_antenna_beam_footprint_state.inner,
@@ -158,7 +158,7 @@ fn ui_system(
             }            
         );
     tx_infos_window.show(ctx, |ui| {
-        infos_ui(
+        carrier_infos_ui(
             ui,
             &rx_carrier_state.inner,
             &rx_antenna_beam_footprint_state.inner,

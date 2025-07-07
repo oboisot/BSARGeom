@@ -5,7 +5,7 @@ mod menu;
 pub use menu::{MenuPlugin, MenuWidget};
 
 mod infos;
-pub use infos::infos_ui;
+pub use infos::carrier_infos_ui;
 
 mod tx_panel;
 pub use tx_panel::{TxPanelPlugin, TxPanelWidget};
