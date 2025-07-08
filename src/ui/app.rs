@@ -5,10 +5,11 @@ use egui_extras;
 use crate::{
     scene::{
         TxCarrierState, TxAntennaState, TxAntennaBeamState, TxAntennaBeamFootprintState,
-        RxCarrierState, RxAntennaState, RxAntennaBeamState, RxAntennaBeamFootprintState
+        RxCarrierState, RxAntennaState, RxAntennaBeamState, RxAntennaBeamFootprintState,
+        BsarInfosState
     },
     ui::{
-        carrier_infos_ui,
+        bsar_infos_ui, carrier_infos_ui,
         MenuPlugin, MenuWidget, TxPanelPlugin, TxPanelWidget, RxPanelPlugin, RxPanelWidget
     }
 };
@@ -74,6 +75,8 @@ fn ui_system(
     mut rx_antenna_state: ResMut<RxAntennaState>,
     mut rx_antenna_beam_state: ResMut<RxAntennaBeamState>,
     rx_antenna_beam_footprint_state: Res<RxAntennaBeamFootprintState>,
+    // BSAR infos resource
+    bsar_infos_state: Res<BsarInfosState>
 ) -> Result {
     let ctx = contexts.ctx_mut()?;
 
@@ -125,6 +128,7 @@ fn ui_system(
         .collapsible(true)
         .title_bar(true)
         .enabled(true)
+        .default_open(false)
         .anchor(
             egui::Align2::LEFT_TOP,
             if menu_widget.is_tx_panel_opened {
@@ -149,6 +153,7 @@ fn ui_system(
         .collapsible(true)
         .title_bar(true)
         .enabled(true)
+        .default_open(false)
         .anchor(
             egui::Align2::RIGHT_TOP,
             if menu_widget.is_rx_panel_opened {
@@ -163,6 +168,22 @@ fn ui_system(
             &rx_carrier_state.inner,
             &rx_antenna_beam_footprint_state.inner,
             "rx"
+        );
+    });
+
+    // BSAR Infos
+    let bsar_infos_window = egui::Window::new("BSAR Infos")
+        .resizable(false)
+        .constrain(false)
+        .collapsible(true)
+        .title_bar(true)
+        .enabled(true)
+        .default_open(false)
+        .anchor(egui::Align2::CENTER_TOP, egui::Vec2::ZERO);
+    bsar_infos_window.show(ctx, |ui| {
+        bsar_infos_ui(
+            ui,
+            &bsar_infos_state.inner
         );
     });
     

@@ -7,7 +7,6 @@ edition = "2024"
 version = "0.16"
 default-features = false 
 features = [
-    # "bevy_color",
     "bevy_pbr",
     "bevy_render", 
     "bevy_winit",
@@ -28,11 +27,11 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 
 # Size optimization (see: https://github.com/johnthagen/min-sized-rust)
 [profile.release]
-strip = true # Automatically strip symbols from the binary.
+strip = true # = "symbols" Automatically strip symbols from the binary.
 lto = true
 codegen-units = 1
 
 [profile.web-release]
 inherits = "release"
-strip = false # Do not strip symbols from the binary.
+strip = false # = "none" Do not strip symbols from the binary.
 opt-level = "z"

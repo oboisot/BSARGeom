@@ -4,6 +4,7 @@ use bevy::{
 };
 
 use crate::{
+    bsar::BsarInfos,
     camera::CameraPlugin,
     world::WorldPlugin,
     entities::{
@@ -25,6 +26,7 @@ impl Plugin for ScenePlugin {
             .init_resource::<RxAntennaState>()
             .init_resource::<RxAntennaBeamState>()
             .init_resource::<RxAntennaBeamFootprintState>()
+            .init_resource::<BsarInfosState>()
             .add_plugins((CameraPlugin, WorldPlugin))
             .add_systems(Startup, spawn_scene);
     }
@@ -121,6 +123,21 @@ impl Default for TxAntennaBeamFootprintState {
 #[derive(Component)]
 pub struct Rx;
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum PixelResolution {
+    Ground,
+    Slant,    
+}
+
+impl PixelResolution {
+    pub fn is_ground(&self) -> bool {
+        match self {
+            PixelResolution::Ground => true,
+            PixelResolution::Slant => false,
+        }
+    }
+}
+
 /// Resource to keep old state of Transmitter
 #[derive(Resource)]
 pub struct RxCarrierState {
@@ -128,7 +145,8 @@ pub struct RxCarrierState {
     pub noise_temperature_k: f64,
     pub noise_factor_db: f64,
     pub integration_time_s: f64,
-    pub integration_time_for_squared_ground_pixels: bool, // true if integration time is set to have "squared ground pixels"
+    pub squared_pixels: bool,
+    pub pixel_resolution: PixelResolution,
 }
 
 impl Default for RxCarrierState {
@@ -145,8 +163,9 @@ impl Default for RxCarrierState {
             },
             noise_temperature_k: 290.0,
             noise_factor_db: 5.0,
-            integration_time_s: 0.0,
-            integration_time_for_squared_ground_pixels: true
+            integration_time_s: 1.0,
+            squared_pixels: true,
+            pixel_resolution: PixelResolution::Ground
         }
     }
 }
@@ -204,12 +223,27 @@ impl Default for RxAntennaBeamFootprintState {
 #[derive(Component)]
 pub struct IsoRangeEllipsoid;
 
+/// Resource to keep state of BSAR system
+#[derive(Resource)]
+pub struct BsarInfosState {
+    pub inner: BsarInfos
+}
+
+impl Default for BsarInfosState {
+    fn default() -> Self {
+        Self {
+            inner: BsarInfos::default()
+        }
+    }
+}
+
 fn spawn_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut tx_state: (ResMut<TxCarrierState>, Res<TxAntennaState>, Res<TxAntennaBeamState>, ResMut<TxAntennaBeamFootprintState>),
     mut rx_state: (ResMut<RxCarrierState>, Res<RxAntennaState>, Res<RxAntennaBeamState>, ResMut<RxAntennaBeamFootprintState>),
+    mut bsar_infos_state: ResMut<BsarInfosState>
 ) {
     // Tx antenna beam material
     let tx_antenna_beam_material = StandardMaterial {
@@ -328,4 +362,10 @@ fn spawn_scene(
         ))
         .insert(IsoRangeEllipsoid) // Add IsoRangeEllipsoid Component marker to entity
         .insert(Name::new("Iso Range Ellipsoid"));
+
+    // Update BSAR infos state
+    bsar_infos_state.inner.update_from_state(
+        &tx_state.0,
+        &rx_state.0
+    );
 }

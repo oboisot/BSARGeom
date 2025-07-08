@@ -19,7 +19,8 @@ use crate::{
     },
     scene::{
         Rx, RxAntennaBeamState, RxAntennaState, RxCarrierState, RxAntennaBeamFootprintState,
-        TxCarrierState, IsoRangeEllipsoid
+        TxCarrierState, BsarInfosState, IsoRangeEllipsoid,
+        PixelResolution
     },
 };
 
@@ -36,7 +37,7 @@ impl Plugin for RxPanelPlugin {
 #[derive(Resource)]
 pub struct RxPanelWidget {
     pub transform_needs_update: bool,
-    pub velocity_indicator_needs_update: bool,
+    pub velocity_vector_needs_update: bool,
     pub system_needs_update: bool,
 }
 
@@ -44,7 +45,7 @@ impl Default for RxPanelWidget {
     fn default() -> Self {
         Self {
             transform_needs_update: false,
-            velocity_indicator_needs_update: false,
+            velocity_vector_needs_update: false,
             system_needs_update: false,
         }
     }
@@ -60,7 +61,7 @@ impl RxPanelWidget {
     ) {
         
         self.transform_needs_update = false;
-        self.velocity_indicator_needs_update = false;
+        self.velocity_vector_needs_update = false;
         self.system_needs_update = false;
         let mut old_state = 0.0f64;
 
@@ -118,7 +119,7 @@ impl RxPanelWidget {
                         .suffix(" m/s")
                 ).on_hover_text(hover_text);
                 if old_state != rx_carrier_state.inner.velocity_mps {
-                    self.velocity_indicator_needs_update = true;
+                    self.velocity_vector_needs_update = true;
                 }
                 ui.end_row();
 
@@ -364,12 +365,37 @@ impl RxPanelWidget {
                 ui.label("Integration time: ").on_hover_text(hover_text.clone());
                 old_state = rx_carrier_state.integration_time_s;
                 ui.vertical(|ui| {
+                    let old_state = rx_carrier_state.squared_pixels;
                     ui.checkbox(
-                        &mut rx_carrier_state.integration_time_for_squared_ground_pixels,
-                        "Squared ground pixels",
+                        &mut rx_carrier_state.squared_pixels,
+                        "Squared pixels",
+                    );
+                    if rx_carrier_state.squared_pixels != old_state {
+                        self.system_needs_update = true;
+                    }
+                    ui.add_enabled_ui(
+                        rx_carrier_state.squared_pixels,
+                        |ui| {
+                            ui.horizontal(|ui| {
+                                let old_state = rx_carrier_state.pixel_resolution.clone();
+                                ui.selectable_value(
+                                    &mut rx_carrier_state.pixel_resolution,
+                                    PixelResolution::Ground,
+                                    "Ground res."
+                                );
+                                ui.selectable_value(
+                                    &mut rx_carrier_state.pixel_resolution,
+                                    PixelResolution::Slant,
+                                    "Slant res."
+                                );
+                                if rx_carrier_state.pixel_resolution != old_state {
+                                    self.system_needs_update = true;
+                                }
+                            });
+                        }
                     );
                     ui.add_enabled(
-                        !rx_carrier_state.integration_time_for_squared_ground_pixels,
+                        !rx_carrier_state.squared_pixels,
                         egui::DragValue::new(&mut rx_carrier_state.integration_time_s)
                             .update_while_editing(false)
                             .speed(1.0)
@@ -398,6 +424,7 @@ fn update_rx(
     mut meshes: ResMut<Assets<Mesh>>,
     mut rx_carrier_state: ResMut<RxCarrierState>,
     mut rx_antenna_beam_footprint_state: ResMut<RxAntennaBeamFootprintState>,
+    mut bsar_infos_state: ResMut<BsarInfosState>,
     // Queries
     rx_antenna_beam_footprint_q: Query<&Mesh3d, (With<Rx>, With<AntennaBeamFootprint>)>,
     rx_antenna_beam_elevation_line_q: Query<&Mesh3d, (With<Rx>, With<AntennaBeamElevationLine>)>,
@@ -410,7 +437,8 @@ fn update_rx(
     mut iso_range_ellipsoid_q: Query<&mut Transform, (Without<Rx>, Without<Antenna>, Without<AntennaBeam>, Without<VelocityVector>, With<IsoRangeEllipsoid>)>,
 ) {
     if !(rx_panel_widget.transform_needs_update  ||
-         rx_panel_widget.velocity_indicator_needs_update) {
+         rx_panel_widget.velocity_vector_needs_update ||
+         rx_panel_widget.system_needs_update) {
         return; // No need to update transforms if no changes were made
     }
     for (mut carrier_tranform, carrier_children) in rx_carrier_q.iter_mut() {
@@ -473,8 +501,13 @@ fn update_rx(
                         &rx_carrier_state.inner.position_m  // OR in world frame
                     );
                 }
+                // Update BSAR infos state
+                bsar_infos_state.inner.update_from_state(
+                    &tx_carrier_state,
+                    &rx_carrier_state
+                );
             }
-            if rx_panel_widget.velocity_indicator_needs_update {
+            if rx_panel_widget.velocity_vector_needs_update {
                 if let Ok(mut velocity_indicator_transform) = rx_velocity_indicator_q.get_mut(carrier_child) {
                     // Update velocity vector transform
                     *velocity_indicator_transform = velocity_indicator_transform_from_state(
@@ -495,5 +528,14 @@ fn update_rx(
                 }
             }
         }
+    }
+    if rx_panel_widget.transform_needs_update  ||
+       rx_panel_widget.velocity_vector_needs_update ||
+       rx_panel_widget.system_needs_update {
+        // Update BSAR infos state
+        bsar_infos_state.inner.update_from_state(
+            &tx_carrier_state,
+            &rx_carrier_state
+        );
     }
 }

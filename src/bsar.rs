@@ -2,6 +2,8 @@
 
 use bevy::math::DVec3;
 
+use crate::scene::{TxCarrierState, RxCarrierState};
+
 /// Speed of light in vacuum constant `c` \[m.s<sup>-1</sup>\] from [`CODATA`] database on [`NIST`] website.
 ///
 /// [`CODATA`]: https://codata.org/
@@ -14,11 +16,11 @@ const SINC_WIDTH_AT_HALF_POWER: f64 = 0.885892941378904715150369091935531;
 /// The squared value of [`SINC_WIDTH_AT_HALF_POWER`].
 const SINC_WIDTH_AT_HALF_POWER_SQUARED: f64 = 0.784806303584967506070224247343716;
 
-pub struct BSARinfos {
+pub struct BsarInfos {
     ///
-    pub slant_range_min_m: Option<f64>,
-    pub slant_range_max_m: Option<f64>,
-    pub slant_range_center_m: Option<f64>,
+    pub range_min_m: Option<f64>,
+    pub range_max_m: Option<f64>,
+    pub range_center_m: Option<f64>,
     ///
     pub direct_range_m: Option<f64>,
     /// The bistatic angle in degrees.
@@ -30,29 +32,77 @@ pub struct BSARinfos {
     pub ground_lateral_resolution_m: Option<f64>,
     pub resolution_area_m2: Option<f64>,
     /// The Doppler frequency in Hz.
-    pub doppler_frequency: Option<f64>,
+    pub doppler_frequency_hz: Option<f64>,
     /// The Doppler rate in Hz/s.
-    pub doppler_rate: Option<f64>,
+    pub doppler_rate_hzps: Option<f64>,
     /// 
     pub integration_time_s: Option<f64>,
     ///
     pub processed_doppler_bandwidth_hz: Option<f64>,
+    ///
+    pub prf_min_hz: Option<f64>,
+    pub prf_max_hz: Option<f64>,
+    ///
+    pub nesz: Option<f64>,
 }
 
+impl Default for BsarInfos {
+    fn default() -> Self {
+        Self {
+            range_min_m: None,
+            range_max_m: None,
+            range_center_m: None,
+            direct_range_m: None,
+            bistatic_angle_deg: None,
+            slant_range_resolution_m: None,
+            slant_lateral_resolution_m: None,
+            ground_range_resolution_m: None,
+            ground_lateral_resolution_m: None,
+            resolution_area_m2: None,
+            doppler_frequency_hz: None,
+            doppler_rate_hzps: None,
+            integration_time_s: None,
+            processed_doppler_bandwidth_hz: None,
+            prf_min_hz: None,
+            prf_max_hz: None,
+            nesz: None,
+        }
+    }
+}
 
-impl BSARinfos {
-    pub fn from_config(
+impl BsarInfos {
+    pub fn update_from_state(
+        &mut self,
+        tx_state: &TxCarrierState,
+        rx_state: &RxCarrierState,
+    ) {
+        self.update(
+            &(-tx_state.inner.position_m),
+            &tx_state.inner.velocity_vector_mps,
+            &(-rx_state.inner.position_m),
+            &rx_state.inner.velocity_vector_mps,
+            tx_state.center_frequency_ghz * 1e9, // Convert GHz to Hz
+            tx_state.bandwidth_mhz * 1e6, // Convert MHz to Hz
+            rx_state.integration_time_s,
+            rx_state.squared_pixels, // If `true` the integration time is computed to have squared pixels ignoring input integration_time_s
+            rx_state.pixel_resolution.is_ground()
+        );
+    }
+
+    pub fn update(
+        &mut self,
         txp: &DVec3,
         vtx: &DVec3,
         rxp: &DVec3,
         vrx: &DVec3,
         center_frequency_hz: f64,
         bandwidth_hz: f64,
-        integration_time_s: Option<f64>, // If None, the integration time is computed to have squared pixels
-        ground_resolution: bool, // If `true` and integration_time_s is `None`, the ground resolution is computed, otherwise the slant resolution is computed
-    ) -> Self {
+        integration_time_s: f64,
+        squared_pixels: bool, // If `true` the integration time is computed to have squared pixels ignoring input integration_time_s
+        ground_resolution: bool, // If `true` the integration time is computed for ground resolution, otherwise for slant resolution
+    ) {
         let mut txp_norm = txp.length_squared();
-        if txp_norm > 0.0 {        
+        if txp_norm > 0.0 {
             let mut rxp_norm = rxp.length_squared();
             if rxp_norm > 0.0 {
                 txp_norm = txp_norm.sqrt();
@@ -71,100 +121,85 @@ impl BSARinfos {
                 let dbetag_norm = dbetag.length();
                 // Integration time
                 let lem = SPEED_OF_LIGHT_IN_VACUUM / center_frequency_hz; // wavelength in m
-                let integration_time_s = if let Some(integration_time_s) = integration_time_s {
-                    integration_time_s
-                } else {
+                let integration_time_s = if squared_pixels {
                     if ground_resolution {
                         bandwidth_hz / center_frequency_hz * betag_norm / dbetag_norm
                     } else {
                         bandwidth_hz / center_frequency_hz * beta_norm / dbeta_norm
                     }
+                } else {
+                    integration_time_s
                 };
                 // Slant ranges
-                let slant_range_min_m = None; // TODO
-                let slant_range_max_m = None; // TODO
-                let slant_range_center_m = Some(txp_norm + rxp_norm);
+                self.range_min_m = None; // TODO
+                self.range_max_m = None; // TODO
+                self.range_center_m = Some(txp_norm + rxp_norm);
                 // Direct range
-                let direct_range_m = Some((txp - rxp).length());
+                self.direct_range_m = Some((txp - rxp).length());
                 // Bistatic angle
                 let arg = 0.5 * beta_norm;
-                let bistatic_angle_deg = if arg > 1.0 { // Check range outside 1            
+                self.bistatic_angle_deg = if arg > 1.0 { // Check range outside 1            
                     Some(180.0)
                 } else {
                     Some((2.0 * arg.acos()).to_degrees())
                 };
                 // Resolution parameters
-                let slant_range_resolution_m = Some(
+                self.slant_range_resolution_m = Some(
                     SINC_WIDTH_AT_HALF_POWER * SPEED_OF_LIGHT_IN_VACUUM / (bandwidth_hz * beta_norm)
                 );
-                let slant_lateral_resolution_m = Some(
+                self.slant_lateral_resolution_m = Some(
                     SINC_WIDTH_AT_HALF_POWER * lem / (integration_time_s * dbeta_norm)
                 );
-                let ground_range_resolution_m = Some(
+                self.ground_range_resolution_m = Some(
                     SINC_WIDTH_AT_HALF_POWER * SPEED_OF_LIGHT_IN_VACUUM / (bandwidth_hz * betag_norm)
                 );
-                let ground_lateral_resolution_m = Some(
+                self.ground_lateral_resolution_m = Some(
                     SINC_WIDTH_AT_HALF_POWER * lem / (integration_time_s * dbetag_norm)
                 );
-                let resolution_area_m2 = Some(
+                self.resolution_area_m2 = Some(
                     SINC_WIDTH_AT_HALF_POWER_SQUARED * SPEED_OF_LIGHT_IN_VACUUM * lem /
                         (bandwidth_hz * integration_time_s * betag.cross(dbetag).length())
                 );
                 // Doppler frequency
-                let doppler_frequency = Some(
+                self.doppler_frequency_hz = Some(
                     (vtx.dot(utxp) + vrx.dot(urxp)) / lem
                 );
                 // Doppler rate
                 let singamma_tx = vtx.normalize_or_zero().dot(utxp); // sin(gamma_tx) = vtx.normalize().dot(utxp)
                 let singamma_rx = vrx.normalize_or_zero().dot(urxp);
-                let doppler_rate = -(
+                let doppler_rate_hzps = -(
                     vtx.length_squared() * (1.0 - singamma_tx * singamma_tx) / txp_norm + // cos²(x) = 1 - sin²(x)
                     vrx.length_squared() * (1.0 - singamma_rx * singamma_rx) / rxp_norm
                 ) / lem;
-                let processed_doppler_bandwidth_hz = Some(
-                    integration_time_s * doppler_rate.abs()
+                self.processed_doppler_bandwidth_hz = Some(
+                    integration_time_s * doppler_rate_hzps.abs()
                 );
+                self.doppler_rate_hzps = Some(doppler_rate_hzps);
+                self.integration_time_s = Some(integration_time_s);
 
-                Self {
-                    slant_range_min_m,
-                    slant_range_max_m,
-                    slant_range_center_m,
-                    direct_range_m,
-                    bistatic_angle_deg,
-                    slant_range_resolution_m,
-                    slant_lateral_resolution_m,
-                    ground_range_resolution_m,
-                    ground_lateral_resolution_m,
-                    resolution_area_m2,
-                    doppler_frequency,
-                    doppler_rate: Some(doppler_rate),
-                    integration_time_s: Some(integration_time_s),
-                    processed_doppler_bandwidth_hz,
-                }
-            } else { // rxp is a zero vector
-                Self::default_none()
+                // Self {
+                //     range_min_m,
+                //     range_max_m,
+                //     range_center_m,
+                //     direct_range_m,
+                //     bistatic_angle_deg,
+                //     slant_range_resolution_m,
+                //     slant_lateral_resolution_m,
+                //     ground_range_resolution_m,
+                //     ground_lateral_resolution_m,
+                //     resolution_area_m2,
+                //     doppler_frequency_hz,
+                //     doppler_rate_hzps: Some(doppler_rate_hzps),
+                //     integration_time_s: Some(integration_time_s),
+                //     processed_doppler_bandwidth_hz,
+                // }
+        //     } else { // rxp is a zero vector
+        //         Self::default()
+        //     }
+        // } else { // txp is a zero vector
+        //     Self::default()
+        // }
             }
-        } else { // txp is a zero vector
-            Self::default_none()
-        }
-    }
-
-    fn default_none() -> Self {
-        Self {
-            slant_range_min_m: None,
-            slant_range_max_m: None,
-            slant_range_center_m: None,
-            direct_range_m: None,
-            bistatic_angle_deg: None,
-            slant_range_resolution_m: None,
-            slant_lateral_resolution_m: None,
-            ground_range_resolution_m: None,
-            ground_lateral_resolution_m: None,
-            resolution_area_m2: None,
-            doppler_frequency: None,
-            doppler_rate: None,
-            integration_time_s: None,
-            processed_doppler_bandwidth_hz: None,
         }
     }
 }
