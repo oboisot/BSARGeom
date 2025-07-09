@@ -20,7 +20,7 @@ features = [
 ]
 
 [dependencies]
-bevy_panorbit_camera = { version = "0.26.0" }
+bevy_panorbit_camera = { version = "0.27.0", features = ["bevy_egui"] }
 bevy_egui = "0.35"
 egui_extras = { version = "0.31", features = ["image"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
