@@ -366,6 +366,8 @@ fn spawn_scene(
     // Update BSAR infos state
     bsar_infos_state.inner.update_from_state(
         &tx_state.0,
-        &rx_state.0
+        &rx_state.0,
+        &tx_state.3.inner,
+        &rx_state.3.inner
     );
 }

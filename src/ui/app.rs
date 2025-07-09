@@ -127,6 +127,7 @@ fn ui_system(
         .constrain(false)
         .collapsible(true)
         .title_bar(true)
+        .max_width(320.0)
         .enabled(true)
         .default_open(false)
         .anchor(
@@ -147,11 +148,12 @@ fn ui_system(
     });
 
     // Rx Infos
-    let tx_infos_window = egui::Window::new("Rx Infos")
+    let rx_infos_window = egui::Window::new("Rx Infos")
         .resizable(false)
         .constrain(false)
         .collapsible(true)
         .title_bar(true)
+        .max_width(320.0)
         .enabled(true)
         .default_open(false)
         .anchor(
@@ -162,7 +164,7 @@ fn ui_system(
                 egui::Vec2::new(0.0, 0.0)
             }            
         );
-    tx_infos_window.show(ctx, |ui| {
+    rx_infos_window.show(ctx, |ui| {
         carrier_infos_ui(
             ui,
             &rx_carrier_state.inner,
@@ -177,6 +179,7 @@ fn ui_system(
         .constrain(false)
         .collapsible(true)
         .title_bar(true)
+        .max_width(300.0)
         .enabled(true)
         .default_open(false)
         .anchor(egui::Align2::CENTER_TOP, egui::Vec2::ZERO);

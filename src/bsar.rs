@@ -2,7 +2,9 @@
 
 use bevy::math::DVec3;
 
-use crate::scene::{TxCarrierState, RxCarrierState};
+use crate::{
+    constants::TO_Y_UP_F64, entities::AntennaBeamFootprintState, scene::{RxCarrierState, TxCarrierState}
+};
 
 /// Speed of light in vacuum constant `c` \[m.s<sup>-1</sup>\] from [`CODATA`] database on [`NIST`] website.
 ///
@@ -18,54 +20,54 @@ const SINC_WIDTH_AT_HALF_POWER_SQUARED: f64 = 0.78480630358496750607022424734371
 
 pub struct BsarInfos {
     ///
-    pub range_min_m: Option<f64>,
-    pub range_max_m: Option<f64>,
-    pub range_center_m: Option<f64>,
+    pub range_min_m: f64,
+    pub range_max_m: f64,
+    pub range_center_m: f64,
     ///
-    pub direct_range_m: Option<f64>,
+    pub direct_range_m: f64,
     /// The bistatic angle in degrees.
-    pub bistatic_angle_deg: Option<f64>,
+    pub bistatic_angle_deg: f64,
     /// Resolution parameters.
-    pub slant_range_resolution_m: Option<f64>,
-    pub slant_lateral_resolution_m: Option<f64>,
-    pub ground_range_resolution_m: Option<f64>,
-    pub ground_lateral_resolution_m: Option<f64>,
-    pub resolution_area_m2: Option<f64>,
+    pub slant_range_resolution_m: f64,
+    pub slant_lateral_resolution_m: f64,
+    pub ground_range_resolution_m: f64,
+    pub ground_lateral_resolution_m: f64,
+    pub resolution_area_m2: f64,
     /// The Doppler frequency in Hz.
-    pub doppler_frequency_hz: Option<f64>,
+    pub doppler_frequency_hz: f64,
     /// The Doppler rate in Hz/s.
-    pub doppler_rate_hzps: Option<f64>,
+    pub doppler_rate_hzps: f64,
     /// 
-    pub integration_time_s: Option<f64>,
+    pub integration_time_s: f64,
     ///
-    pub processed_doppler_bandwidth_hz: Option<f64>,
+    pub processed_doppler_bandwidth_hz: f64,
     ///
-    pub prf_min_hz: Option<f64>,
-    pub prf_max_hz: Option<f64>,
+    pub prf_min_hz: f64,
+    pub prf_max_hz: f64,
     ///
-    pub nesz: Option<f64>,
+    pub nesz: f64,
 }
 
 impl Default for BsarInfos {
     fn default() -> Self {
         Self {
-            range_min_m: None,
-            range_max_m: None,
-            range_center_m: None,
-            direct_range_m: None,
-            bistatic_angle_deg: None,
-            slant_range_resolution_m: None,
-            slant_lateral_resolution_m: None,
-            ground_range_resolution_m: None,
-            ground_lateral_resolution_m: None,
-            resolution_area_m2: None,
-            doppler_frequency_hz: None,
-            doppler_rate_hzps: None,
-            integration_time_s: None,
-            processed_doppler_bandwidth_hz: None,
-            prf_min_hz: None,
-            prf_max_hz: None,
-            nesz: None,
+            range_min_m: f64::NAN,
+            range_max_m: f64::NAN,
+            range_center_m: f64::NAN,
+            direct_range_m: f64::NAN,
+            bistatic_angle_deg: f64::NAN,
+            slant_range_resolution_m: f64::NAN,
+            slant_lateral_resolution_m: f64::NAN,
+            ground_range_resolution_m: f64::NAN,
+            ground_lateral_resolution_m: f64::NAN,
+            resolution_area_m2: f64::NAN,
+            doppler_frequency_hz: f64::NAN,
+            doppler_rate_hzps: f64::NAN,
+            integration_time_s: f64::NAN,
+            processed_doppler_bandwidth_hz: f64::NAN,
+            prf_min_hz: f64::NAN,
+            prf_max_hz: f64::NAN,
+            nesz: f64::NAN,
         }
     }
 }
@@ -75,12 +77,16 @@ impl BsarInfos {
         &mut self,
         tx_state: &TxCarrierState,
         rx_state: &RxCarrierState,
+        tx_footprint: &AntennaBeamFootprintState,
+        rx_footprint: &AntennaBeamFootprintState,
     ) {
         self.update(
             &(-tx_state.inner.position_m),
             &tx_state.inner.velocity_vector_mps,
             &(-rx_state.inner.position_m),
             &rx_state.inner.velocity_vector_mps,
+            tx_footprint,
+            rx_footprint,
             tx_state.center_frequency_ghz * 1e9, // Convert GHz to Hz
             tx_state.bandwidth_mhz * 1e6, // Convert MHz to Hz
             rx_state.integration_time_s,
@@ -95,6 +101,8 @@ impl BsarInfos {
         vtx: &DVec3,
         rxp: &DVec3,
         vrx: &DVec3,
+        tx_footprint: &AntennaBeamFootprintState,
+        rx_footprint: &AntennaBeamFootprintState,
         center_frequency_hz: f64,
         bandwidth_hz: f64,
         integration_time_s: f64,
@@ -121,7 +129,7 @@ impl BsarInfos {
                 let dbetag_norm = dbetag.length();
                 // Integration time
                 let lem = SPEED_OF_LIGHT_IN_VACUUM / center_frequency_hz; // wavelength in m
-                let integration_time_s = if squared_pixels {
+                self.integration_time_s = if squared_pixels {
                     if ground_resolution {
                         bandwidth_hz / center_frequency_hz * betag_norm / dbetag_norm
                     } else {
@@ -131,51 +139,44 @@ impl BsarInfos {
                     integration_time_s
                 };
                 // Slant ranges
-                self.range_min_m = None; // TODO
-                self.range_max_m = None; // TODO
-                self.range_center_m = Some(txp_norm + rxp_norm);
+                self.range_center_m = txp_norm + rxp_norm;
+                (self.range_min_m,
+                    self.range_max_m) = bsar_range_min_max(
+                    txp, rxp,
+                    &tx_footprint,
+                    &rx_footprint
+                );
                 // Direct range
-                self.direct_range_m = Some((txp - rxp).length());
+                self.direct_range_m = (txp - rxp).length();
                 // Bistatic angle
                 let arg = 0.5 * beta_norm;
                 self.bistatic_angle_deg = if arg > 1.0 { // Check range outside 1            
-                    Some(180.0)
+                    180.0
                 } else {
-                    Some((2.0 * arg.acos()).to_degrees())
+                    (2.0 * arg.acos()).to_degrees()
                 };
                 // Resolution parameters
-                self.slant_range_resolution_m = Some(
-                    SINC_WIDTH_AT_HALF_POWER * SPEED_OF_LIGHT_IN_VACUUM / (bandwidth_hz * beta_norm)
-                );
-                self.slant_lateral_resolution_m = Some(
-                    SINC_WIDTH_AT_HALF_POWER * lem / (integration_time_s * dbeta_norm)
-                );
-                self.ground_range_resolution_m = Some(
-                    SINC_WIDTH_AT_HALF_POWER * SPEED_OF_LIGHT_IN_VACUUM / (bandwidth_hz * betag_norm)
-                );
-                self.ground_lateral_resolution_m = Some(
-                    SINC_WIDTH_AT_HALF_POWER * lem / (integration_time_s * dbetag_norm)
-                );
-                self.resolution_area_m2 = Some(
+                self.slant_range_resolution_m = 
+                    SINC_WIDTH_AT_HALF_POWER * SPEED_OF_LIGHT_IN_VACUUM / (bandwidth_hz * beta_norm);
+                self.slant_lateral_resolution_m = 
+                    SINC_WIDTH_AT_HALF_POWER * lem / (self.integration_time_s * dbeta_norm);
+                self.ground_range_resolution_m = 
+                    SINC_WIDTH_AT_HALF_POWER * SPEED_OF_LIGHT_IN_VACUUM / (bandwidth_hz * betag_norm);
+                self.ground_lateral_resolution_m =
+                    SINC_WIDTH_AT_HALF_POWER * lem / (self.integration_time_s * dbetag_norm);
+                self.resolution_area_m2 = 
                     SINC_WIDTH_AT_HALF_POWER_SQUARED * SPEED_OF_LIGHT_IN_VACUUM * lem /
-                        (bandwidth_hz * integration_time_s * betag.cross(dbetag).length())
-                );
+                        (bandwidth_hz * self.integration_time_s * betag.cross(dbetag).length());
                 // Doppler frequency
-                self.doppler_frequency_hz = Some(
-                    (vtx.dot(utxp) + vrx.dot(urxp)) / lem
-                );
+                self.doppler_frequency_hz = (vtx.dot(utxp) + vrx.dot(urxp)) / lem;
                 // Doppler rate
                 let singamma_tx = vtx.normalize_or_zero().dot(utxp); // sin(gamma_tx) = vtx.normalize().dot(utxp)
                 let singamma_rx = vrx.normalize_or_zero().dot(urxp);
-                let doppler_rate_hzps = -(
+                self.doppler_rate_hzps = -(
                     vtx.length_squared() * (1.0 - singamma_tx * singamma_tx) / txp_norm + // cos²(x) = 1 - sin²(x)
                     vrx.length_squared() * (1.0 - singamma_rx * singamma_rx) / rxp_norm
                 ) / lem;
-                self.processed_doppler_bandwidth_hz = Some(
-                    integration_time_s * doppler_rate_hzps.abs()
-                );
-                self.doppler_rate_hzps = Some(doppler_rate_hzps);
-                self.integration_time_s = Some(integration_time_s);
+                self.processed_doppler_bandwidth_hz = self.integration_time_s * self.doppler_rate_hzps.abs();
 
                 // Self {
                 //     range_min_m,
@@ -202,6 +203,56 @@ impl BsarInfos {
             }
         }
     }
+}
+
+/// Commputes the BSAR system min and max ranges in meters
+/// from Tx or Rx footprint. The used footprint for calculation
+/// is heuristically determined by chooseing the one with the
+/// smallest `ground_range_swath_m`.
+pub fn bsar_range_min_max(
+    txp: &DVec3,
+    rxp: &DVec3,
+    tx_footprint: &AntennaBeamFootprintState,
+    rx_footprint: &AntennaBeamFootprintState,
+) -> (f64, f64) {
+    // Transform to Y-up coordinate system for computation with antenna beam footprint
+    let txp_yup = TO_Y_UP_F64 * *txp;
+    let rxp_yup = TO_Y_UP_F64 * *rxp;    
+    let mut min_range = f64::MAX;
+    let mut max_range = 0.0;
+    // Temporary variables
+    let mut range: f64;
+    if rx_footprint.ground_range_swath_m <= tx_footprint.ground_range_swath_m {
+        // Use Rx footprint
+        for p in rx_footprint.points.iter() {
+            // Compute range to Tx footprint
+            range = (txp_yup + p).length() + (rxp_yup + p).length();
+            // Min range
+            if range < min_range {
+                min_range = range;
+            }
+            // Max range
+            if range > max_range {
+                max_range = range;
+            }
+        }
+    } else {
+        // Use Tx footprint
+        for p in tx_footprint.points.iter() {
+            // Compute range to Rx footprint
+            range = (txp_yup + p).length() + (rxp_yup + p).length();
+            // Min range
+            if range < min_range {
+                min_range = range;
+            }
+            // Max range
+            if range > max_range {
+                max_range = range;
+            }
+        }
+    }
+
+    (min_range, max_range)
 }
 
 /// Returns the bistatic angle formed by triangle Transmitter - ground point - Receiver in radians.
@@ -252,7 +303,7 @@ pub fn doppler_frequency_sg(
     vtx: &DVec3,
     rxp: &DVec3,
     vrx: &DVec3,
-) -> Option<f64> {
+) -> f64 {
     let mut txp_norm = txp.length_squared();
     if txp_norm > 0.0 {        
         let mut rxp_norm = rxp.length_squared();
@@ -261,11 +312,11 @@ pub fn doppler_frequency_sg(
             rxp_norm = rxp_norm.sqrt();
             let utxp = txp / txp_norm; // Normalized txp            
             let urxp = rxp / rxp_norm; // Normalized rxp
-            Some((vtx.dot(utxp) + vrx.dot(urxp)) / lem)
+            (vtx.dot(utxp) + vrx.dot(urxp)) / lem
         } else { // rxp is a zero vector
-            None
+            f64::NAN
         }
     } else { // txp is a zero vector
-        None
+        f64::NAN
     }
 }

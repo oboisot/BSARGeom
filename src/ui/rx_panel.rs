@@ -19,10 +19,11 @@ use crate::{
     },
     scene::{
         Rx, RxAntennaBeamState, RxAntennaState, RxCarrierState, RxAntennaBeamFootprintState,
-        TxCarrierState, BsarInfosState, IsoRangeEllipsoid,
+        TxAntennaBeamFootprintState, TxCarrierState, BsarInfosState, IsoRangeEllipsoid,
         PixelResolution
     },
 };
+
 
 pub struct RxPanelPlugin;
 
@@ -415,16 +416,19 @@ impl RxPanelWidget {
 
 // see: https://github.com/bevyengine/bevy/issues/4864
 fn update_rx(
-    // Resources
-    rx_panel_widget: Res<RxPanelWidget>,
-    rx_antenna_state: Res<RxAntennaState>,
-    rx_antenna_beam_state: Res<RxAntennaBeamState>,
-    tx_carrier_state: Res<TxCarrierState>,
-    // Mutable resources
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut rx_carrier_state: ResMut<RxCarrierState>,
-    mut rx_antenna_beam_footprint_state: ResMut<RxAntennaBeamFootprintState>,
-    mut bsar_infos_state: ResMut<BsarInfosState>,
+    res: ( // Resources
+        Res<RxPanelWidget>,               // rx_panel_widget
+        Res<RxAntennaState>,              // rx_antenna_state
+        Res<RxAntennaBeamState>,          // rx_antenna_beam_state
+        Res<TxCarrierState>,              // tx_carrier_state
+        Res<TxAntennaBeamFootprintState>, // tx_antenna_beam_footprint_state
+    ),    
+    resmut: ( // Mutable resources
+        ResMut<Assets<Mesh>>,                // meshes
+        ResMut<RxCarrierState>,              // rx_carrier_state
+        ResMut<RxAntennaBeamFootprintState>, // rx_antenna_beam_footprint_state
+        ResMut<BsarInfosState>               // bsar_infos_state
+    ),
     // Queries
     rx_antenna_beam_footprint_q: Query<&Mesh3d, (With<Rx>, With<AntennaBeamFootprint>)>,
     rx_antenna_beam_elevation_line_q: Query<&Mesh3d, (With<Rx>, With<AntennaBeamElevationLine>)>,
@@ -436,6 +440,22 @@ fn update_rx(
     mut rx_velocity_indicator_q: Query<&mut Transform, (Without<Rx>, Without<Antenna>, Without<AntennaBeam>, With<VelocityVector>)>,
     mut iso_range_ellipsoid_q: Query<&mut Transform, (Without<Rx>, Without<Antenna>, Without<AntennaBeam>, Without<VelocityVector>, With<IsoRangeEllipsoid>)>,
 ) {
+    // Extracts resources
+    let (
+        rx_panel_widget,
+        rx_antenna_state,
+        rx_antenna_beam_state,
+        tx_carrier_state,
+        tx_antenna_beam_footprint_state
+    ) = res;
+    // Extracts mutable resources
+    let (
+        mut meshes,
+        mut rx_carrier_state,
+        mut rx_antenna_beam_footprint_state,
+        mut bsar_infos_state
+    ) = resmut;
+    // Checks if nothing needs to be done
     if !(rx_panel_widget.transform_needs_update  ||
          rx_panel_widget.velocity_vector_needs_update ||
          rx_panel_widget.system_needs_update) {
@@ -501,11 +521,6 @@ fn update_rx(
                         &rx_carrier_state.inner.position_m  // OR in world frame
                     );
                 }
-                // Update BSAR infos state
-                bsar_infos_state.inner.update_from_state(
-                    &tx_carrier_state,
-                    &rx_carrier_state
-                );
             }
             if rx_panel_widget.velocity_vector_needs_update {
                 if let Ok(mut velocity_indicator_transform) = rx_velocity_indicator_q.get_mut(carrier_child) {
@@ -529,13 +544,15 @@ fn update_rx(
             }
         }
     }
+    // Update BSAR infos state
     if rx_panel_widget.transform_needs_update  ||
        rx_panel_widget.velocity_vector_needs_update ||
-       rx_panel_widget.system_needs_update {
-        // Update BSAR infos state
+       rx_panel_widget.system_needs_update {        
         bsar_infos_state.inner.update_from_state(
             &tx_carrier_state,
-            &rx_carrier_state
+            &rx_carrier_state,
+            &tx_antenna_beam_footprint_state.inner,
+            &rx_antenna_beam_footprint_state.inner,
         );
     }
 }
