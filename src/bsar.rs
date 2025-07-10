@@ -3,14 +3,16 @@
 use bevy::math::DVec3;
 
 use crate::{
-    constants::TO_Y_UP_F64, entities::AntennaBeamFootprintState, scene::{RxCarrierState, TxCarrierState}
+    constants::TO_Y_UP_F64,
+    entities::AntennaBeamFootprintState,
+    scene::{RxCarrierState, TxCarrierState}
 };
 
 /// Speed of light in vacuum constant `c` \[m.s<sup>-1</sup>\] from [`CODATA`] database on [`NIST`] website.
 ///
 /// [`CODATA`]: https://codata.org/
 /// [`NIST`]: https://pml.nist.gov/cuu/Constants/
-const SPEED_OF_LIGHT_IN_VACUUM: f64 = 299792458.0; // m/s
+pub const SPEED_OF_LIGHT_IN_VACUUM: f64 = 299792458.0; // m/s
 /// The width of squared normalized cardinal sine function at half height.
 /// 
 /// This constant is twice the positive solution of sinc²(x) = 1/2.
@@ -177,29 +179,7 @@ impl BsarInfos {
                     vrx.length_squared() * (1.0 - singamma_rx * singamma_rx) / rxp_norm
                 ) / lem;
                 self.processed_doppler_bandwidth_hz = self.integration_time_s * self.doppler_rate_hzps.abs();
-
-                // Self {
-                //     range_min_m,
-                //     range_max_m,
-                //     range_center_m,
-                //     direct_range_m,
-                //     bistatic_angle_deg,
-                //     slant_range_resolution_m,
-                //     slant_lateral_resolution_m,
-                //     ground_range_resolution_m,
-                //     ground_lateral_resolution_m,
-                //     resolution_area_m2,
-                //     doppler_frequency_hz,
-                //     doppler_rate_hzps: Some(doppler_rate_hzps),
-                //     integration_time_s: Some(integration_time_s),
-                //     processed_doppler_bandwidth_hz,
-                // }
-        //     } else { // rxp is a zero vector
-        //         Self::default()
-        //     }
-        // } else { // txp is a zero vector
-        //     Self::default()
-        // }
+                // TODO NESZ
             }
         }
     }

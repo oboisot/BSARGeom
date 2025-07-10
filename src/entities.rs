@@ -32,6 +32,13 @@ pub use carrier::{
 mod grid_helper;
 pub use grid_helper::spawn_grid_helper;
 
+mod iso_range_doppler_plane;
+pub use iso_range_doppler_plane::{
+    spawn_iso_range_doppler_plane,
+    iso_range_doppler_plane_transform_from_state,
+    IsoRangeDopplerPlaneState
+};
+
 mod iso_range_ellipsoid;
 pub use iso_range_ellipsoid::{
     spawn_iso_range_ellipsoid,

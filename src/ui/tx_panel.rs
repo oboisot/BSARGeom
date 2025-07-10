@@ -6,6 +6,7 @@ use crate::{
     entities::{
         antenna_beam_transform_from_state, antenna_transform_from_state,
         carrier_transform_from_state,
+        iso_range_doppler_plane_transform_from_state,
         iso_range_ellipsoid_transform_from_state,
         update_antenna_beam_footprint_azimuth_line_mesh_from_state,
         update_antenna_beam_footprint_elevation_line_mesh_from_state,
@@ -15,11 +16,12 @@ use crate::{
         update_velocity_vector,
         velocity_indicator_transform_from_state,
         Antenna, AntennaBeam, AntennaBeamAzimuthLine, AntennaBeamElevationLine, AntennaBeamFootprint,
-        Carrier, VelocityVector
+        Carrier, IsoRangeDopplerPlaneState, VelocityVector
     },
     scene::{
         BsarInfosState, IsoRangeEllipsoid, RxAntennaBeamFootprintState, RxCarrierState,
-        Tx, TxAntennaBeamFootprintState, TxAntennaBeamState, TxAntennaState, TxCarrierState, 
+        Tx, TxAntennaBeamFootprintState, TxAntennaBeamState, TxAntennaState, TxCarrierState,
+        IsoRangeDopplerPlane,
     },
 };
 
@@ -442,6 +444,7 @@ impl TxPanelWidget {
 // see: https://github.com/bevyengine/bevy/issues/4864
 fn update_tx(
     res: ( // Resources
+        Res<Assets<StandardMaterial>>,    // materials
         Res<TxPanelWidget>,               // tx_panel_widget
         Res<TxAntennaState>,              // tx_antenna_state
         Res<TxAntennaBeamState>,          // tx_antenna_beam_state
@@ -450,23 +453,29 @@ fn update_tx(
     ),
     resmut: ( // Mutable resources
         ResMut<Assets<Mesh>>,                // meshes
+        ResMut<Assets<Image>>,               // images
         ResMut<TxCarrierState>,              // tx_carrier_state
         ResMut<TxAntennaBeamFootprintState>, // tx_antenna_beam_footprint_state
-        ResMut<BsarInfosState>               // bsar_infos_state
+        ResMut<BsarInfosState>,              // bsar_infos_state
+        ResMut<IsoRangeDopplerPlaneState>,   // iso_range_doppler_plane_state
     ),
     // Queries,
     tx_antenna_beam_footprint_q: Query<&Mesh3d, (With<Tx>, With<AntennaBeamFootprint>)>,
     tx_antenna_beam_elevation_line_q: Query<&Mesh3d, (With<Tx>, With<AntennaBeamElevationLine>)>,
     tx_antenna_beam_azimuth_line_q: Query<&Mesh3d, (With<Tx>, With<AntennaBeamAzimuthLine>)>,
+    iso_range_doppler_material_q: Query<&MeshMaterial3d<StandardMaterial>, With<IsoRangeDopplerPlane>>,
     // Mutable queries
     mut tx_carrier_q: Query<(&mut Transform, &Children), (With<Tx>, With<Carrier>)>,
     mut tx_antenna_q: Query<(&mut Transform, &Children), (Without<Tx>, With<Antenna>)>,
     mut tx_antenna_beam_q: Query<&mut Transform, (Without<Tx>, Without<Antenna>, With<AntennaBeam>)>,
     mut tx_velocity_indicator_q: Query<&mut Transform, (Without<Tx>, Without<Antenna>, Without<AntennaBeam>, With<VelocityVector>)>,
     mut iso_range_ellipsoid_q: Query<&mut Transform, (Without<Tx>, Without<Antenna>, Without<AntennaBeam>, Without<VelocityVector>, With<IsoRangeEllipsoid>)>,
+    mut iso_range_doppler_q: Query<&mut Transform, (Without<Tx>, Without<Antenna>, Without<AntennaBeam>, Without<VelocityVector>, Without<IsoRangeEllipsoid>, With<IsoRangeDopplerPlane>)>,
+    
 ) {
     // Extracts resources
     let (
+        materials,
         tx_panel_widget,
         tx_antenna_state,
         tx_antenna_beam_state,
@@ -476,9 +485,11 @@ fn update_tx(
     // Extracts mutable resources
     let (
         mut meshes,
+        mut images,
         mut tx_carrier_state,
         mut tx_antenna_beam_footprint_state,
-        mut bsar_infos_state
+        mut bsar_infos_state,
+        mut iso_range_doppler_plane_state,
     ) = resmut;
     // Checks if nothing needs to be done
     if !(tx_panel_widget.transform_needs_update  ||
@@ -572,12 +583,34 @@ fn update_tx(
     // Update BSAR infos state
     if tx_panel_widget.transform_needs_update  ||
        tx_panel_widget.velocity_vector_needs_update ||
-       tx_panel_widget.system_needs_update {        
+       tx_panel_widget.system_needs_update {
+        // Update BSAR infos 
         bsar_infos_state.inner.update_from_state(
             &tx_carrier_state,
             &rx_carrier_state,
             &tx_antenna_beam_footprint_state.inner,
             &rx_antenna_beam_footprint_state.inner,
         );
+        // Update iso-range doppler plane transform and texture
+        for mut iso_range_doppler_plane_tranform in iso_range_doppler_q.iter_mut() {
+            for material_handle in iso_range_doppler_material_q.iter() {
+                if let Some(material) = materials.get(material_handle) {
+                    if let Some(ref image_handle) = material.base_color_texture {
+                        if let Some(image) = images.get_mut(image_handle) {
+                            if let Ok(transform) = iso_range_doppler_plane_transform_from_state(
+                                &tx_carrier_state,
+                                &rx_carrier_state,
+                                &tx_antenna_beam_footprint_state.inner,
+                                &rx_antenna_beam_footprint_state.inner,
+                                image,
+                                &mut iso_range_doppler_plane_state
+                            ) {
+                                *iso_range_doppler_plane_tranform = transform;
+                            };
+                        }
+                    }
+                }
+            }
+        }
     }
 }

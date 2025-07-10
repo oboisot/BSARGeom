@@ -6,11 +6,16 @@ use bevy::{
 use crate::{
     bsar::BsarInfos,
     camera::CameraPlugin,
-    world::WorldPlugin,
     entities::{
-        AntennaBeamState, AntennaBeamFootprintState, AntennaState, CarrierState,
-        spawn_carrier, spawn_iso_range_ellipsoid, iso_range_ellipsoid_transform_from_state
-    }
+        iso_range_doppler_plane_transform_from_state,
+        iso_range_ellipsoid_transform_from_state,
+        spawn_carrier,
+        spawn_iso_range_doppler_plane,
+        spawn_iso_range_ellipsoid,
+        AntennaBeamFootprintState, AntennaBeamState, AntennaState,
+        CarrierState, IsoRangeDopplerPlaneState
+    },
+    world::WorldPlugin
 };
 
 pub struct ScenePlugin;
@@ -27,6 +32,7 @@ impl Plugin for ScenePlugin {
             .init_resource::<RxAntennaBeamState>()
             .init_resource::<RxAntennaBeamFootprintState>()
             .init_resource::<BsarInfosState>()
+            .init_resource::<IsoRangeDopplerPlaneState>()
             .add_plugins((CameraPlugin, WorldPlugin))
             .add_systems(Startup, spawn_scene);
     }
@@ -223,6 +229,10 @@ impl Default for RxAntennaBeamFootprintState {
 #[derive(Component)]
 pub struct IsoRangeEllipsoid;
 
+/// Iso-range Doppler marker component
+#[derive(Component)]
+pub struct IsoRangeDopplerPlane;
+
 /// Resource to keep state of BSAR system
 #[derive(Resource)]
 pub struct BsarInfosState {
@@ -241,10 +251,35 @@ fn spawn_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut tx_state: (ResMut<TxCarrierState>, Res<TxAntennaState>, Res<TxAntennaBeamState>, ResMut<TxAntennaBeamFootprintState>),
-    mut rx_state: (ResMut<RxCarrierState>, Res<RxAntennaState>, Res<RxAntennaBeamState>, ResMut<RxAntennaBeamFootprintState>),
-    mut bsar_infos_state: ResMut<BsarInfosState>
+    mut images: ResMut<Assets<Image>>,
+    mut bsar_infos_state: ResMut<BsarInfosState>,
+    mut iso_range_doppler_plane_state: ResMut<IsoRangeDopplerPlaneState>,    
+    tx_state: (
+        ResMut<TxCarrierState>,
+        Res<TxAntennaState>,
+        Res<TxAntennaBeamState>,
+        ResMut<TxAntennaBeamFootprintState>
+    ),
+    rx_state: (
+        ResMut<RxCarrierState>,
+        Res<RxAntennaState>,
+        Res<RxAntennaBeamState>,
+        ResMut<RxAntennaBeamFootprintState>
+    )
 ) {
+    // Extracts resources
+    let (
+        mut tx_carrier_state,
+        tx_antenna_state,
+        tx_antenna_beam_state,
+        mut tx_antenna_beam_footprint_state
+    ) = tx_state;
+    let (
+        mut rx_carrier_state,
+        rx_antenna_state,
+        rx_antenna_beam_state,
+        mut rx_antenna_beam_footprint_state
+    ) = rx_state;
     // Tx antenna beam material
     let tx_antenna_beam_material = StandardMaterial {
         base_color: Color::linear_rgba(1.0, 1.0, 1.0, 0.15), // White
@@ -271,10 +306,10 @@ fn spawn_scene(
         &mut commands,
         &mut meshes,
         &mut materials,
-        &mut tx_state.0.inner,
-        &tx_state.1.inner,
-        &tx_state.2.inner,
-        &mut tx_state.3.inner,
+        &mut tx_carrier_state.inner,
+        &tx_antenna_state.inner,
+        &tx_antenna_beam_state.inner,
+        &mut tx_antenna_beam_footprint_state.inner,
         tx_antenna_beam_material,
         tx_antenna_beam_footprint_material,
         Some("Tx".into())
@@ -318,10 +353,10 @@ fn spawn_scene(
         &mut commands,
         &mut meshes,
         &mut materials,
-        &mut rx_state.0.inner,
-        &rx_state.1.inner,
-        &rx_state.2.inner,
-        &mut rx_state.3.inner,
+        &mut rx_carrier_state.inner,
+        &rx_antenna_state.inner,
+        &rx_antenna_beam_state.inner,
+        &mut rx_antenna_beam_footprint_state.inner,
         rx_antenna_beam_material,
         rx_antenna_beam_footprint_material,
         Some("Rx".into())
@@ -357,17 +392,44 @@ fn spawn_scene(
     commands
         .entity(iso_range_ellipsoid_entity)
         .insert(iso_range_ellipsoid_transform_from_state( // Update ellipsoid transform
-            &tx_state.0.inner.position_m, // OT in world frame
-            &rx_state.0.inner.position_m  // OR in world frame
+            &tx_carrier_state.inner.position_m, // OT in world frame
+            &rx_carrier_state.inner.position_m  // OR in world frame
         ))
         .insert(IsoRangeEllipsoid) // Add IsoRangeEllipsoid Component marker to entity
         .insert(Name::new("Iso Range Ellipsoid"));
 
     // Update BSAR infos state
     bsar_infos_state.inner.update_from_state(
-        &tx_state.0,
-        &rx_state.0,
-        &tx_state.3.inner,
-        &rx_state.3.inner
+        &tx_carrier_state,
+        &rx_carrier_state,
+        &tx_antenna_beam_footprint_state.inner,
+        &rx_antenna_beam_footprint_state.inner,
     );
+
+    // Add IsoRangeDopplerPlane entity
+    let (
+        iso_range_doppler_plane_entity,
+        iso_range_doppler_plane_image_handle
+     ) = spawn_iso_range_doppler_plane(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        &mut images
+    );
+    if let Some(image) = images.get_mut(&iso_range_doppler_plane_image_handle) {
+        if let Ok(transform) = iso_range_doppler_plane_transform_from_state(
+            &tx_carrier_state,
+            &rx_carrier_state,
+            &tx_antenna_beam_footprint_state.inner,
+            &rx_antenna_beam_footprint_state.inner,
+            image,
+            &mut iso_range_doppler_plane_state
+        ) {
+            commands
+                .entity(iso_range_doppler_plane_entity)
+                .insert(transform)
+                .insert(IsoRangeDopplerPlane) // Add IsoRangeDopplerPlane Component marker to entity
+                .insert(Name::new("Iso Range Doppler Plane"));
+        }
+    }
 }
