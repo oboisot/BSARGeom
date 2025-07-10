@@ -444,7 +444,6 @@ impl TxPanelWidget {
 // see: https://github.com/bevyengine/bevy/issues/4864
 fn update_tx(
     res: ( // Resources
-        Res<Assets<StandardMaterial>>,    // materials
         Res<TxPanelWidget>,               // tx_panel_widget
         Res<TxAntennaState>,              // tx_antenna_state
         Res<TxAntennaBeamState>,          // tx_antenna_beam_state
@@ -452,6 +451,7 @@ fn update_tx(
         Res<RxAntennaBeamFootprintState>, // rx_antenna_beam_footprint_state
     ),
     resmut: ( // Mutable resources
+        ResMut<Assets<StandardMaterial>>,    // materials
         ResMut<Assets<Mesh>>,                // meshes
         ResMut<Assets<Image>>,               // images
         ResMut<TxCarrierState>,              // tx_carrier_state
@@ -475,7 +475,6 @@ fn update_tx(
 ) {
     // Extracts resources
     let (
-        materials,
         tx_panel_widget,
         tx_antenna_state,
         tx_antenna_beam_state,
@@ -484,6 +483,7 @@ fn update_tx(
     ) = res;
     // Extracts mutable resources
     let (
+        mut materials,
         mut meshes,
         mut images,
         mut tx_carrier_state,
@@ -594,7 +594,7 @@ fn update_tx(
         // Update iso-range doppler plane transform and texture
         for mut iso_range_doppler_plane_tranform in iso_range_doppler_q.iter_mut() {
             for material_handle in iso_range_doppler_material_q.iter() {
-                if let Some(material) = materials.get(material_handle) {
+                if let Some(material) = materials.get_mut(material_handle) {
                     if let Some(ref image_handle) = material.base_color_texture {
                         if let Some(image) = images.get_mut(image_handle) {
                             if let Ok(transform) = iso_range_doppler_plane_transform_from_state(
@@ -605,9 +605,12 @@ fn update_tx(
                                 image,
                                 &mut iso_range_doppler_plane_state
                             ) {
+                                // Update iso-range doppler plane transform
                                 *iso_range_doppler_plane_tranform = transform;
                             };
                         }
+                        // Update iso-range doppler plane texture with newly caluclated image
+                        material.base_color_texture = Some(image_handle.clone());
                     }
                 }
             }
