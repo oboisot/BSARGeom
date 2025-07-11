@@ -78,6 +78,7 @@ pub struct AntennaState {
 pub struct AntennaBeamState {
     pub elevation_beam_width_deg: f64,
     pub azimuth_beam_width_deg: f64,
+    pub one_way_gain_dbi: f64,
 }
 
 pub fn spawn_carrier(

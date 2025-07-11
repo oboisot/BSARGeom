@@ -4,12 +4,11 @@ use bevy::{
     prelude::*,
     render::render_resource::{Extent3d, TextureDimension, TextureFormat}
 };
-// use plotters::prelude::*;
 use plotters::{
     backend::{BitMapBackend, BGRXPixel},
     chart::ChartBuilder,
     drawing::IntoDrawingArea,
-    element::PathElement,
+    series::{LineSeries, DashedLineSeries},
     style::{RGBAColor, ShapeStyle}
 };
 
@@ -180,20 +179,22 @@ impl IsoRangeDopplerPlaneState {
             for level in iso_range_levels {
                 for line in march(&self.iso_range, level) { // Compute contours
                     chart.draw_series(
-                        std::iter::once(
-                            PathElement::new(line, ISO_RANGE_STYLE) // here Contours are the same type as Coord for plotters
-                        )
+                        LineSeries::new(line, ISO_RANGE_STYLE) // here Contours are the same type as Coord for plotters
                     )?;
                 }
             }
             // Iso-doppler
             for level in iso_doppler_levels {
                 for line in march(&self.iso_doppler, level) { // Compute contours
-                    chart.draw_series(
-                        std::iter::once(
-                            PathElement::new(line, ISO_DOPPLER_STYLE) // here Contours are the same type as Coord for plotters
-                        )
-                    )?;
+                    if level >= 0.0 {
+                        chart.draw_series(
+                            LineSeries::new(line, ISO_DOPPLER_STYLE)
+                        )?;
+                    } else {
+                        chart.draw_series(
+                            DashedLineSeries::new(line, 6, 10, ISO_DOPPLER_STYLE)
+                        )?;
+                    }
                 }
             }
         }

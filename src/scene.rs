@@ -105,7 +105,8 @@ impl Default for TxAntennaBeamState {
         Self {
             inner: AntennaBeamState {
                 elevation_beam_width_deg: 20.0f64,
-                azimuth_beam_width_deg: 20.0f64
+                azimuth_beam_width_deg: 20.0f64,
+                one_way_gain_dbi: 20.0f64
             }
         }
     }
@@ -205,7 +206,8 @@ impl Default for RxAntennaBeamState {
         Self {
             inner: AntennaBeamState {
                 elevation_beam_width_deg: 16.0f64,
-                azimuth_beam_width_deg: 16.0f64
+                azimuth_beam_width_deg: 16.0f64,
+                one_way_gain_dbi: 16.0f64,
             }
         }
     }

@@ -5,7 +5,8 @@ const TX_MENU_OPEN_ICON: egui::ImageSource<'_> = egui::include_image!("../../ass
 const TX_MENU_CLOSE_ICON: egui::ImageSource<'_> = egui::include_image!("../../assets/menu-tx-close-48.png");
 const RX_MENU_OPEN_ICON: egui::ImageSource<'_> = egui::include_image!("../../assets/menu-rx-open-48.png");
 const RX_MENU_CLOSE_ICON: egui::ImageSource<'_> = egui::include_image!("../../assets/menu-rx-close-48.png");
-
+const MENU_BIST_ICON: egui::ImageSource<'_> = egui::include_image!("../../assets/menu-bist-48.png");
+const MENU_MONO_ICON: egui::ImageSource<'_> = egui::include_image!("../../assets/menu-mono-48.png");
 
 pub struct MenuPlugin;
 
@@ -19,6 +20,7 @@ impl Plugin for MenuPlugin {
 pub struct MenuWidget {
     pub is_tx_panel_opened: bool,
     pub is_rx_panel_opened: bool,
+    pub is_monostatic: bool,
 }
 
 impl Default for MenuWidget {
@@ -26,6 +28,7 @@ impl Default for MenuWidget {
         Self {
             is_tx_panel_opened: false,
             is_rx_panel_opened: false,
+            is_monostatic: false,
         }
     }
 }
@@ -37,6 +40,7 @@ impl MenuWidget {
 
         let tx_menu_icon = if self.is_tx_panel_opened { TX_MENU_CLOSE_ICON } else { TX_MENU_OPEN_ICON };
         let rx_menu_icon = if self.is_rx_panel_opened { RX_MENU_CLOSE_ICON } else { RX_MENU_OPEN_ICON };
+        let menu_bist_mono_icon = if self.is_monostatic { MENU_MONO_ICON } else { MENU_BIST_ICON };
 
         ui.vertical_centered(|ui| {
             // Top buttons
@@ -67,6 +71,20 @@ impl MenuWidget {
                         .on_hover_text(hover_text)
                         .clicked() {
                             self.is_rx_panel_opened = !self.is_rx_panel_opened;
+                        };
+                    ui.separator();
+                    ui.add_space(1.0);
+
+                    // Monostatic button
+                    let monostatic_button = egui::Button::image(menu_bist_mono_icon)
+                        .selected(self.is_monostatic);
+                    let hover_text = egui::RichText::new("Switch between Bistatic/Monostatic mode")
+                            .color(egui::Color32::from_rgb(200, 200, 200))
+                            .monospace();
+                    if ui.add(monostatic_button)
+                        .on_hover_text(hover_text)
+                        .clicked() {
+                            self.is_monostatic = !self.is_monostatic;
                         };
                     ui.separator();
                     ui.add_space(1.0);

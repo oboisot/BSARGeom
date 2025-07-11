@@ -471,7 +471,6 @@ fn update_tx(
     mut tx_velocity_indicator_q: Query<&mut Transform, (Without<Tx>, Without<Antenna>, Without<AntennaBeam>, With<VelocityVector>)>,
     mut iso_range_ellipsoid_q: Query<&mut Transform, (Without<Tx>, Without<Antenna>, Without<AntennaBeam>, Without<VelocityVector>, With<IsoRangeEllipsoid>)>,
     mut iso_range_doppler_q: Query<&mut Transform, (Without<Tx>, Without<Antenna>, Without<AntennaBeam>, Without<VelocityVector>, Without<IsoRangeEllipsoid>, With<IsoRangeDopplerPlane>)>,
-    
 ) {
     // Extracts resources
     let (

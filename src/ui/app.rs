@@ -71,7 +71,7 @@ fn ui_system(
     mut rx_antenna_beam_state: ResMut<RxAntennaBeamState>,
     rx_antenna_beam_footprint_state: Res<RxAntennaBeamFootprintState>,
     // BSAR infos resource
-    bsar_infos_state: Res<BsarInfosState>
+    mut bsar_infos_state: ResMut<BsarInfosState>
 ) -> Result {
     let ctx = contexts.ctx_mut()?;
 
@@ -110,9 +110,16 @@ fn ui_system(
         .show_animated(ctx, menu_widget.is_rx_panel_opened, |ui| {
             rx_panel_widget.ui(
                 ui,
+                &tx_carrier_state,
+                &tx_antenna_state,
+                &tx_antenna_beam_state,
                 &mut rx_carrier_state,
                 &mut rx_antenna_state,
-                &mut rx_antenna_beam_state
+                &mut rx_antenna_beam_state,
+                &mut bsar_infos_state,
+                menu_widget.is_monostatic,
+                tx_panel_widget.transform_needs_update,
+                tx_panel_widget.velocity_vector_needs_update
             );
         });
     
