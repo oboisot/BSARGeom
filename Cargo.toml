@@ -13,8 +13,8 @@ features = [
     "multi_threaded",
     "tonemapping_luts",
     "sysinfo_plugin",
-    "webgl2",
-    # "webgpu",
+    # "webgl2",
+    "webgpu",
     "x11",
     "zstd"
 ]

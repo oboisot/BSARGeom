@@ -96,6 +96,7 @@ impl TxPanelWidget {
             } else {
                 rx_panel_widget.transform_needs_update = true;
                 rx_panel_widget.velocity_vector_needs_update = true;
+                menu_widget.force_rx_system_update = true;
                 menu_widget.was_monostatic = true;
             }
         } else {

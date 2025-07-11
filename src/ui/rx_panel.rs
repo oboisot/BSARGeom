@@ -97,7 +97,6 @@ impl RxPanelWidget {
 // see: https://github.com/bevyengine/bevy/issues/4864
 fn update_rx(
     res: ( // Resources
-        Res<MenuWidget>,                  // menu_widget // For monostatic case
         Res<RxPanelWidget>,               // rx_panel_widget
         Res<RxAntennaState>,              // rx_antenna_state
         Res<RxAntennaBeamState>,          // rx_antenna_beam_state
@@ -108,6 +107,7 @@ fn update_rx(
         ResMut<Assets<StandardMaterial>>,    // materials
         ResMut<Assets<Mesh>>,                // meshes
         ResMut<Assets<Image>>,               // images
+        ResMut<MenuWidget>,                  // menu_widget // For monostatic case
         ResMut<RxCarrierState>,              // rx_carrier_state
         ResMut<RxAntennaBeamFootprintState>, // rx_antenna_beam_footprint_state
         ResMut<BsarInfosState>,              // bsar_infos_state
@@ -128,7 +128,6 @@ fn update_rx(
 ) {
     // Extracts resources
     let (
-        menu_widget,
         rx_panel_widget,
         rx_antenna_state,
         rx_antenna_beam_state,
@@ -140,6 +139,7 @@ fn update_rx(
         mut materials,
         mut meshes,
         mut images,
+        mut menu_widget,
         mut rx_carrier_state,
         mut rx_antenna_beam_footprint_state,
         mut bsar_infos_state,
@@ -243,6 +243,33 @@ fn update_rx(
                 &tx_antenna_beam_footprint_state.inner,
                 &rx_antenna_beam_footprint_state.inner,
             );
+        }
+        if menu_widget.force_rx_system_update {
+            // Update iso-range doppler plane transform and texture
+            for mut iso_range_doppler_plane_tranform in iso_range_doppler_q.iter_mut() {
+                for material_handle in iso_range_doppler_material_q.iter() {
+                    if let Some(material) = materials.get_mut(material_handle) {
+                        if let Some(ref image_handle) = material.base_color_texture {
+                            if let Some(image) = images.get_mut(image_handle) {
+                                if let Ok(transform) = iso_range_doppler_plane_transform_from_state(
+                                    &tx_carrier_state,
+                                    &rx_carrier_state,
+                                    &tx_antenna_beam_footprint_state.inner,
+                                    &rx_antenna_beam_footprint_state.inner,
+                                    image,
+                                    &mut iso_range_doppler_plane_state
+                                ) {
+                                    // Update iso-range doppler plane transform
+                                    *iso_range_doppler_plane_tranform = transform;
+                                };
+                            }
+                            // Update iso-range doppler plane texture with newly caluclated image
+                            material.base_color_texture = Some(image_handle.clone());
+                        }
+                    }
+                }
+            }
+            menu_widget.force_rx_system_update = false;
         }
     } else if rx_panel_widget.transform_needs_update  ||
               rx_panel_widget.velocity_vector_needs_update ||
