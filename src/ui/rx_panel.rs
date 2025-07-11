@@ -259,7 +259,6 @@ fn update_rx(
     // Monostatic case
     if menu_widget.is_monostatic {
         if rx_panel_widget.system_needs_update {
-            // Update BSAR infos
             bsar_infos_state.inner.update_from_state(
                 &tx_carrier_state,
                 &rx_carrier_state,
