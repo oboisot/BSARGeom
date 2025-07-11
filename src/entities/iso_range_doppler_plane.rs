@@ -22,7 +22,7 @@ use crate::{
 
 const TEXTURE_WIDTH: usize  = 2048;
 const TEXTURE_HEIGHT: usize = 2048;
-const GRID_SIZE: usize = 101;
+const GRID_SIZE: usize = 251;
 const NLEVELS: usize = 50;
 // Colors for the IsoRange and IsoDoppler
 const GROUND_GREY: RGBAColor = RGBAColor(128, 128, 128, 1.0);
@@ -47,23 +47,7 @@ pub fn spawn_iso_range_doppler_plane(
     materials: &mut ResMut<Assets<StandardMaterial>>,
     images: &mut ResMut<Assets<Image>>,
 ) -> (Entity, Handle<Image>) {
-    // // Create the image texture for the plane
-    // // see for plotters side: https://github.com/cvhammond/bevy_plotters_test/blob/main/src/menu.rs
-    // let mut image = Image::new_fill(
-    //     Extent3d {
-    //         width: TEXTURE_WIDTH as u32,
-    //         height: TEXTURE_HEIGHT as u32,
-    //         depth_or_array_layers: 1,
-    //     },
-    //     TextureDimension::D2,
-    //     &[0, 0, 0, 0],
-    //     TextureFormat::Bgra8UnormSrgb,
-    //     RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD
-    // );
-    // // You need to set these texture usage flags in order to use the image as a render target
-    // image.texture_descriptor.usage =
-    //     TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST | TextureUsages::RENDER_ATTACHMENT;
-    // let image_handle = images.add(image);
+    // Create the image texture for the plane
     let image_handle = images.add(Image::new_fill(
         Extent3d {
             width: TEXTURE_WIDTH as u32,
@@ -362,7 +346,7 @@ impl IsoDoppler {
             .collect::<Vec<f64>>();
         //
         self.min = f64::MAX;
-        self.max = 0.0;
+        self.max = -f64::MAX;
         // Temporary variables
         let mut op = DVec3::ZERO;
         let mut tmp: f64;
@@ -386,11 +370,9 @@ impl IsoDoppler {
     }
 
     pub fn levels(&self, nlevels: usize) -> Vec<f64> {
-        let min = self.min.ceil(); // Round to meter up
-        let max = self.max.floor(); // Round to meter down
-        let dv = (max - min) / (nlevels - 1) as f64;
+        let dv = (self.max - self.min) / (nlevels - 1) as f64;
         (0..nlevels).into_iter().map(|i| {
-            min + dv * i as f64
+            self.min + dv * i as f64
         }).collect()
     }
 }
