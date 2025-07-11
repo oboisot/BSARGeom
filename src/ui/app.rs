@@ -86,6 +86,23 @@ fn ui_system(
         }
     );
 
+        // Receiver panel
+    egui::SidePanel::right("Receiver")
+        .resizable(false)
+        .default_width(300.0)
+        .max_width(300.0)
+        .show_separator_line(true)
+        .show_animated(ctx, menu_widget.is_rx_panel_opened, |ui| {
+            rx_panel_widget.ui(
+                ui,
+                &menu_widget,
+                &mut rx_carrier_state,
+                &mut rx_antenna_state,
+                &mut rx_antenna_beam_state,
+                &mut bsar_infos_state,
+            );
+        });
+
     // Transmitter panel
     egui::SidePanel::left("Transmitter")
         .resizable(false)
@@ -95,33 +112,28 @@ fn ui_system(
         .show_animated(ctx, menu_widget.is_tx_panel_opened, |ui| {
             tx_panel_widget.ui(
                 ui,
+                &mut menu_widget,
+                &mut rx_panel_widget,
                 &mut tx_carrier_state,
                 &mut tx_antenna_state,
-                &mut tx_antenna_beam_state
-            );
-        });
-    
-    // Rceiver panel
-    egui::SidePanel::right("Receiver")
-        .resizable(false)
-        .default_width(300.0)
-        .max_width(300.0)
-        .show_separator_line(true)
-        .show_animated(ctx, menu_widget.is_rx_panel_opened, |ui| {
-            rx_panel_widget.ui(
-                ui,
-                &tx_carrier_state,
-                &tx_antenna_state,
-                &tx_antenna_beam_state,
+                &mut tx_antenna_beam_state,
                 &mut rx_carrier_state,
                 &mut rx_antenna_state,
                 &mut rx_antenna_beam_state,
-                &mut bsar_infos_state,
-                menu_widget.is_monostatic,
-                tx_panel_widget.transform_needs_update,
-                tx_panel_widget.velocity_vector_needs_update
             );
         });
+    // Forces Rx updates in Monostatic case when Tx panel is closed
+    if menu_widget.is_monostatic &&
+       !menu_widget.was_monostatic &&
+       !menu_widget.is_tx_panel_opened {
+        rx_carrier_state.inner = tx_carrier_state.inner.clone();
+        rx_antenna_state.inner = tx_antenna_state.inner.clone();
+        rx_antenna_beam_state.inner = tx_antenna_beam_state.inner.clone();
+        rx_panel_widget.transform_needs_update = true;
+        rx_panel_widget.velocity_vector_needs_update = true;
+        rx_panel_widget.system_needs_update = true;
+        menu_widget.was_monostatic = true;
+    }
     
     // Tx Infos
     let tx_infos_window = egui::Window::new("Tx Infos")

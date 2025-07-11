@@ -19,7 +19,9 @@ use crate::{
         Carrier, IsoRangeDopplerPlaneState, VelocityVector
     },
     scene::{
-        BsarInfosState, IsoRangeDopplerPlane, IsoRangeEllipsoid, PixelResolution, Rx, RxAntennaBeamFootprintState, RxAntennaBeamState, RxAntennaState, RxCarrierState, TxAntennaBeamFootprintState, TxAntennaBeamState, TxAntennaState, TxCarrierState
+        BsarInfosState, IsoRangeDopplerPlane, IsoRangeEllipsoid, PixelResolution,
+        Rx, RxAntennaBeamFootprintState, RxAntennaBeamState, RxAntennaState, RxCarrierState,
+        TxAntennaBeamFootprintState, TxCarrierState
     },
     ui::MenuWidget,
 };
@@ -40,7 +42,6 @@ pub struct RxPanelWidget {
     pub transform_needs_update: bool,
     pub velocity_vector_needs_update: bool,
     pub system_needs_update: bool,
-    pub was_monostatic: bool, // Allows to hande bistatic/monostatic switch mode
 }
 
 impl Default for RxPanelWidget {
@@ -48,8 +49,7 @@ impl Default for RxPanelWidget {
         Self {
             transform_needs_update: false,
             velocity_vector_needs_update: false,
-            system_needs_update: false,
-            was_monostatic: false,
+            system_needs_update: false
         }
     }
 }
@@ -58,42 +58,20 @@ impl RxPanelWidget {
     pub fn ui(
         &mut self,
         ui: &mut egui::Ui,
-        tx_carrier_state: &TxCarrierState,
-        tx_antenna_state: &TxAntennaState,
-        tx_antenna_beam_state: &TxAntennaBeamState,
+        menu_widget: &MenuWidget,
         rx_carrier_state: &mut RxCarrierState,
         rx_antenna_state: &mut RxAntennaState,
         rx_antenna_beam_state: &mut RxAntennaBeamState,
         bsar_infos_state: &mut BsarInfosState,
-        is_monostatic: bool,
-        tx_transform_needs_update: bool,
-        tx_velocity_vector_needs_update: bool,
     ) {
         // Handle update of parameters, meshes, textures, etc...
         self.transform_needs_update = false;
         self.velocity_vector_needs_update = false;
         self.system_needs_update = false;
 
-        // Monostatic case
-        if is_monostatic {
-            rx_carrier_state.inner = tx_carrier_state.inner.clone();
-            rx_antenna_state.inner = tx_antenna_state.inner.clone();
-            rx_antenna_beam_state.inner = tx_antenna_beam_state.inner.clone();
-            if self.was_monostatic {
-                self.transform_needs_update = tx_transform_needs_update;
-                self.velocity_vector_needs_update = tx_velocity_vector_needs_update;
-            } else {
-                self.transform_needs_update = true;
-                self.velocity_vector_needs_update = true;
-                self.was_monostatic = true;
-            }
-        } else {
-            self.was_monostatic = false;
-        }
-
         // Rx Carrier UI
         ui.add_enabled_ui(
-            !is_monostatic,
+            !menu_widget.is_monostatic,
             |ui| {
                 rx_carrier_ui(
                     ui,

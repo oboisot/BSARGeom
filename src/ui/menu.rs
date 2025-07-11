@@ -21,6 +21,7 @@ pub struct MenuWidget {
     pub is_tx_panel_opened: bool,
     pub is_rx_panel_opened: bool,
     pub is_monostatic: bool,
+    pub was_monostatic: bool,
 }
 
 impl Default for MenuWidget {
@@ -29,6 +30,7 @@ impl Default for MenuWidget {
             is_tx_panel_opened: false,
             is_rx_panel_opened: false,
             is_monostatic: false,
+            was_monostatic: false,
         }
     }
 }
