@@ -152,7 +152,7 @@ impl BsarInfos {
                 self.direct_range_m = (txp - rxp).length();
                 // Bistatic angle
                 let arg = 0.5 * beta_norm;
-                self.bistatic_angle_deg = if arg > 1.0 { // Check range outside 1            
+                self.bistatic_angle_deg = if arg > 1.0 { // Check range outside 1
                     180.0
                 } else {
                     (2.0 * arg.acos()).to_degrees()
@@ -180,7 +180,41 @@ impl BsarInfos {
                 ) / lem;
                 self.processed_doppler_bandwidth_hz = self.integration_time_s * self.doppler_rate_hzps.abs();
                 // TODO NESZ
+            } else {
+                // rxp is a zero vector
+                self.range_min_m = f64::NAN;
+                self.range_max_m = f64::NAN;
+                self.range_center_m = f64::NAN;
+                self.direct_range_m = f64::NAN;
+                self.bistatic_angle_deg = f64::NAN;
+                self.slant_range_resolution_m = f64::NAN;
+                self.slant_lateral_resolution_m = f64::NAN;
+                self.ground_range_resolution_m = f64::NAN;
+                self.ground_lateral_resolution_m = f64::NAN;
+                self.resolution_area_m2 = f64::NAN;
+                self.doppler_frequency_hz = f64::NAN;
+                self.doppler_rate_hzps = f64::NAN;
+                self.integration_time_s = f64::NAN;
+                self.processed_doppler_bandwidth_hz = f64::NAN;
             }
+        } else {
+            self.range_min_m = f64::NAN;
+            self.range_max_m = f64::NAN;
+            self.range_center_m = f64::NAN;
+            self.direct_range_m = f64::NAN;
+            self.bistatic_angle_deg = f64::NAN;
+            self.slant_range_resolution_m = f64::NAN;
+            self.slant_lateral_resolution_m = f64::NAN;
+            self.ground_range_resolution_m = f64::NAN;
+            self.ground_lateral_resolution_m = f64::NAN;
+            self.resolution_area_m2 = f64::NAN;
+            self.doppler_frequency_hz = f64::NAN;
+            self.doppler_rate_hzps = f64::NAN;
+            self.integration_time_s = f64::NAN;
+            self.processed_doppler_bandwidth_hz = f64::NAN;
+            self.prf_min_hz = f64::NAN;
+            self.prf_max_hz = f64::NAN;
+            self.nesz = f64::NAN;
         }
     }
 }
