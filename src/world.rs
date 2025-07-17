@@ -4,7 +4,10 @@ use bevy::{
     render::render_resource::Face,
 };
 
-use crate::entities::{spawn_axes_helper, spawn_grid_helper};
+use crate::{
+    constants::{GRID_SPACING, HALF_PLANE_LENGTH},
+    entities::{spawn_axes_helper, spawn_grid_helper},
+};
 
 pub struct WorldPlugin;
 
@@ -36,9 +39,8 @@ fn insert_ambient_light(mut commands: Commands) {
     commands.insert_resource(ambient_light);
 }
 
-// const PLANE_LENGTH: f32 = 30_000.0;
-const HALF_PLANE_LENGTH: f32 = 15_000.0;
-const GRID_SPACING: f32 = 500.0;
+// const HALF_PLANE_LENGTH: f32 = 15_000.0;
+// const GRID_SPACING: f32 = 500.0;
 
 fn spawn_world(
     mut commands: Commands,

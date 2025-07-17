@@ -15,10 +15,12 @@ use plotters::{
 use crate::{
     bsar::{SPEED_OF_LIGHT_IN_VACUUM, bistatic_range_sg, doppler_frequency_sg},
     contour::{march, Field},
+    constants::HALF_PLANE_LENGTH,
     entities::AntennaBeamFootprintState,
     scene::{TxCarrierState, RxCarrierState},
 };
 
+const MAX_PLANE_LENGTH: f64 = 2.0 * HALF_PLANE_LENGTH as f64;
 const TEXTURE_WIDTH: usize  = 2048;
 const TEXTURE_HEIGHT: usize = 2048;
 const GRID_SIZE: usize = 251;
@@ -89,10 +91,12 @@ pub fn iso_range_doppler_plane_transform_from_state(
 ) -> Result<Transform, Box<dyn std::error::Error>> {
     let lem = tx_carrier_state.center_frequency_ghz * 1e9 /
         SPEED_OF_LIGHT_IN_VACUUM;
-    let extent = 2.1 *
-        tx_antenna_beam_footprint_state.ground_max_coord_m.max(
-            rx_antenna_beam_footprint_state.ground_max_coord_m
-        );
+    let extent = f64::min(
+        MAX_PLANE_LENGTH,
+        2.1 * tx_antenna_beam_footprint_state.ground_max_extent_m.max(
+            rx_antenna_beam_footprint_state.ground_max_extent_m
+        )
+    );
     // Update the texture of the IsoRangeDopplerPlaneState
     iso_range_doppler_plane_state.update_texture(
         &tx_carrier_state.inner.position_m, // OT in world frame

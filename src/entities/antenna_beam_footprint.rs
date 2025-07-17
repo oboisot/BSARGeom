@@ -25,7 +25,8 @@ pub struct AntennaBeamFootprintState {
     pub loc_incidence_min_deg: f64, // Local incidence angle at the minimum range point in degrees
     pub loc_incidence_max_deg: f64, // Local incidence angle at the maximum range point in degrees
     pub ground_range_swath_m: f64, // Ground range swath in meters (i.e., the width of the antenna beam footprint on the ground between range_min_m and range_max_m)
-    pub ground_max_coord_m: f64, // Ground maximum coordinates of the antenna beam footprint in meters
+    // pub ground_max_coord_m: f64, // Ground maximum coordinates of the antenna beam footprint in meters
+    pub ground_max_extent_m: f64, // Ground maximum extent of the antenna beam footprint in meters (between scene center and 3d footpint)
     pub area_m2: f64, // half-power antenna beam footprint area in meters squared
     pub antenna_squint_deg: f64, // Antenna squint angle in degrees
     pub illumination_time_s: f64, // Illumination time in seconds
@@ -43,7 +44,7 @@ impl Default for AntennaBeamFootprintState {
             loc_incidence_min_deg: 0.0, // Default local incidence angle at the minimum range point
             loc_incidence_max_deg: 0.0, // Default local incidence angle at the maximum range point
             ground_range_swath_m: 0.0, // Default ground range swath
-            ground_max_coord_m: 0.0, // Default maximum extent of the antenna beam footprint in the ground plane
+            ground_max_extent_m: 0.0, // Default maximum extent of the antenna beam footprint in the ground plane
             area_m2: 0.0, // Default area of the antenna beam footprint
             antenna_squint_deg: 0.0, // Default antenna squint angle
             illumination_time_s: 0.0, // Default illumination time
@@ -149,11 +150,11 @@ pub fn update_antenna_beam_footprint_mesh_from_state(
         let nyty = n.y * ty; // Normal vector component in the Y direction scaled by the azimuth beam width
         let nztz = n.z * tz; // Normal vector component in the Z direction
         // Parameters for ranges and extent computation
-        let mut ground_max_coord_m = 0.0f64;
+        let mut ground_max_extent_m = 0.0f64;
         let mut range_min_m = f64::MAX;
         let mut range_max_m = 0.0;
         let mut range_m: f64; // Temporary range variable
-        let mut index_min_range: usize = 0; // Index of the minimum range poinûît in the antenna beam footprint
+        let mut index_min_range: usize = 0; // Index of the minimum range point in the antenna beam footprint
         let mut index_max_range: usize = 0; // Index of the maximum range point in the
         // Compute the intersection points and update corresponding mesh positions
         let (mut s, mut c): (f64, f64); // (sin(theta), cos(theta))
@@ -169,8 +170,8 @@ pub fn update_antenna_beam_footprint_mesh_from_state(
             // Update mesh with the new point
             mesh_pos[i] = [point.x as f32, 0.05, point.z as f32];// note: 0.05 in z-direction to be slightly above the ground plane (here Y axis)                
             // Update ranges and extent computation
-            ground_max_coord_m = ground_max_coord_m.max(
-                point.x.abs().max(point.z.abs()) // Update maximum extent in the ground plane (x and z coordinates in Y-up frame)
+            ground_max_extent_m = ground_max_extent_m.max(
+                (point.x * point.x + point.z * point.z).sqrt() // Update maximum extent in the ground plane (x and z coordinates in Y-up frame)
             ); // Update maximum extent in the ground plane
             range_m =  carrier_position_y_up.distance(*point); // Compute the slant range from the antenna to the point
             if range_m < range_min_m {
@@ -187,7 +188,7 @@ pub fn update_antenna_beam_footprint_mesh_from_state(
         antenna_beam_footprint_state.range_center_m = carrier_position_y_up.length();
         antenna_beam_footprint_state.range_min_m = range_min_m;
         antenna_beam_footprint_state.range_max_m = range_max_m;
-        antenna_beam_footprint_state.ground_max_coord_m = ground_max_coord_m;
+        antenna_beam_footprint_state.ground_max_extent_m = ground_max_extent_m;
 
         // Update the ground range swath and local incidences
         let point_min_range = antenna_beam_footprint_state.points[index_min_range];

@@ -4,6 +4,12 @@ use bevy::{
     prelude::{Quat, StandardMaterial, Srgba, Transform}
 };
 
+/// World plane constants
+/// Half length of the world plane in meters
+pub const HALF_PLANE_LENGTH: f32 = 15_000.0;
+/// Spacing of the world grid lines in meters
+pub const GRID_SPACING: f32 = 500.0;
+
 /// Geometric constants
 /// Length of the antenna beam in meters
 pub const CONE_LENGTH: f64 = 1e7;
