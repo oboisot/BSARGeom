@@ -11,7 +11,7 @@ pub trait Field {
 
     /// Helper to force a Field to have all the Z values at the boundaries of the field to be set
     /// to `border_z`. Useful to ensure each path is closed.
-    fn framed(&self, border_z: f64) -> Framed<Self>
+    fn framed(&self, border_z: f64) -> Framed<'_, Self>
     where
         Self: Sized,
     {
