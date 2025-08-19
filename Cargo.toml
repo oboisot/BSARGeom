@@ -20,9 +20,9 @@ features = [
 ]
 
 [dependencies]
-bevy_panorbit_camera = { version = "0.27", features = ["bevy_egui"] }
-bevy_egui = "0.35"
-egui_extras = { version = "0.31", features = ["image"] }
+bevy_panorbit_camera = { version = "0.28", features = ["bevy_egui"] }
+bevy_egui = "0.36"
+egui_extras = { version = "0.32", features = ["image"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
 plotters = "0.3"
 rustc-hash = "2.1"

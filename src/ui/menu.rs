@@ -54,8 +54,10 @@ impl MenuWidget {
                     ui.add_space(1.0);
                     ui.separator();
                     // Transmitter settings panel button
-                    let tx_panel_button = egui::Button::image(tx_menu_icon)
-                        .selected(self.is_tx_panel_opened);
+                    let tx_panel_button = egui::Button::selectable(
+                        self.is_tx_panel_opened,
+                        tx_menu_icon
+                    );
                     let hover_text = egui::RichText::new("Open/Close Transmitter settings panel")
                         .color(egui::Color32::from_rgb(200, 200, 200))
                         .monospace();
@@ -66,8 +68,10 @@ impl MenuWidget {
                         };
                          
                     // Receiver settings panel button
-                    let rx_panel_button = egui::Button::image(rx_menu_icon)
-                        .selected(self.is_rx_panel_opened);
+                    let rx_panel_button = egui::Button::selectable(
+                        self.is_rx_panel_opened,
+                        rx_menu_icon
+                    );
                     let hover_text = egui::RichText::new("Open/Close Receiver settings panel")
                         .color(egui::Color32::from_rgb(200, 200, 200))
                         .monospace();
@@ -80,8 +84,10 @@ impl MenuWidget {
                     ui.add_space(1.0);
 
                     // Monostatic button
-                    let monostatic_button = egui::Button::image(menu_bist_mono_icon)
-                        .selected(self.is_monostatic);
+                    let monostatic_button = egui::Button::selectable(
+                        self.is_monostatic,
+                        menu_bist_mono_icon
+                    );
                     let hover_text = egui::RichText::new("Switch between Bistatic/Monostatic mode")
                             .color(egui::Color32::from_rgb(200, 200, 200))
                             .monospace();
