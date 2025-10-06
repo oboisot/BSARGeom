@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy::render::mesh::{CylinderAnchor, CylinderMeshBuilder};
+use bevy::mesh::{CylinderAnchor, CylinderMeshBuilder};
 
 use crate::constants::{POS_YAXIS_TO_XAXIS, YELLOW_MATERIAL};
 

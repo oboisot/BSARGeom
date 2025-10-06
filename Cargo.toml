@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies.bevy]
-version = "0.16"
+version = "0.17"
 default-features = false 
 features = [
     "bevy_pbr",
@@ -16,12 +16,12 @@ features = [
     # "webgl2",
     "webgpu",
     "x11",
-    "zstd"
+    # "zstd"
 ]
 
 [dependencies]
-bevy_panorbit_camera = { version = "0.28", features = ["bevy_egui"] }
-bevy_egui = "0.36"
+bevy_panorbit_camera = { version = "0.29", features = ["bevy_egui"] }
+bevy_egui = "0.37"
 egui_extras = { version = "0.32", features = ["image"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
 plotters = "0.3"

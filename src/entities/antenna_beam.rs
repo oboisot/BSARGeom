@@ -1,6 +1,6 @@
 use bevy::{
     prelude::*,
-    render::mesh::{ConeAnchor, ConeMeshBuilder}
+    mesh::{ConeAnchor, ConeMeshBuilder}
 };
 
 use crate::constants::CONE_LENGTH;

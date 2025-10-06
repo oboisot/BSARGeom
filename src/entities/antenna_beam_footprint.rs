@@ -3,7 +3,7 @@ use bevy::{
     asset::RenderAssetUsages,
     math::{DQuat, DVec3},
     prelude::*,
-    render::mesh::{PrimitiveTopology, VertexAttributeValues},
+    mesh::{PrimitiveTopology, VertexAttributeValues},
 };
 
 

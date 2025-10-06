@@ -1,7 +1,7 @@
 use bevy::{
     asset::RenderAssetUsages,
     math::Vec3,
-    render::mesh::{Mesh, PrimitiveTopology}
+    mesh::{Mesh, PrimitiveTopology}
 };
 
 /// A list of lines with a start and end position

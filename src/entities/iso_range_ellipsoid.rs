@@ -1,7 +1,7 @@
 use bevy::{
     math::{DMat3, DQuat, DVec3},
     prelude::*,
-    render::mesh::{SphereKind, SphereMeshBuilder}
+    mesh::{SphereKind, SphereMeshBuilder}
 };
 
 use crate::constants::TO_Y_UP_F64;
