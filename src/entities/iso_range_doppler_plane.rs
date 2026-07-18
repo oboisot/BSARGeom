@@ -89,8 +89,8 @@ pub fn iso_range_doppler_plane_transform_from_state(
     image: &mut Image,
     iso_range_doppler_plane_state: &mut IsoRangeDopplerPlaneState,
 ) -> Result<Transform, Box<dyn std::error::Error>> {
-    let lem = tx_carrier_state.center_frequency_ghz * 1e9 /
-        SPEED_OF_LIGHT_IN_VACUUM;
+    let lem = SPEED_OF_LIGHT_IN_VACUUM /
+        (tx_carrier_state.center_frequency_ghz * 1e9); // wavelength λ [m] (= c/f, consistent with bsar.rs)
     let extent = f64::min(
         MAX_PLANE_LENGTH,
         2.1 * tx_antenna_beam_footprint_state.ground_max_extent_m.max(

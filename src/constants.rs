@@ -13,6 +13,9 @@ pub const GRID_SPACING: f32 = 500.0;
 /// Geometric constants
 /// Length of the antenna beam in meters
 pub const CONE_LENGTH: f64 = 1e7;
+/// Clamp distance for degenerate geometry (boresight or beam edge at/above the horizon).
+/// Equal to [`CONE_LENGTH`] so that clamped footprint points coincide with the drawn beam-cone extent.
+pub const MAX_BORESIGHT_RANGE_M: f64 = CONE_LENGTH;
 /// Carrier "size", i.e. length of arrows of its referential in meters
 pub const CARRIER_SIZE: f32 = 150.0; // Size of the carrier
 /// Antenna "size", i.e. length of arrows of its referential in meters

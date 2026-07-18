@@ -168,48 +168,48 @@ fn update_rx(
                     *antenna_transform = antenna_transform_from_state(
                         &rx_antenna_state.inner
                     );
-                    // Update carrier transform                
+                    // Update carrier transform
                     *carrier_tranform = carrier_transform_from_state(
                         &mut rx_carrier_state.inner,
                         &rx_antenna_state.inner
                     );
-                }
-                // Update antenna beam footprint mesh in the same time
-                for mesh_handle in rx_antenna_beam_footprint_q.iter() {
-                    if let Some(mut mesh) = meshes.get_mut(mesh_handle) {
-                        update_antenna_beam_footprint_mesh_from_state(
-                            &rx_carrier_state.inner,
-                            &rx_antenna_state.inner,
-                            &rx_antenna_beam_state.inner,
-                            &mut rx_antenna_beam_footprint_state.inner,
-                            &mut mesh
+                    // Update antenna beam footprint mesh in the same time
+                    for mesh_handle in rx_antenna_beam_footprint_q.iter() {
+                        if let Some(mut mesh) = meshes.get_mut(mesh_handle) {
+                            update_antenna_beam_footprint_mesh_from_state(
+                                &rx_carrier_state.inner,
+                                &rx_antenna_state.inner,
+                                &rx_antenna_beam_state.inner,
+                                &mut rx_antenna_beam_footprint_state.inner,
+                                &mut mesh
+                            );
+                        }
+                    }
+                    // Update antenna beam elevation line mesh in the same time
+                    for mesh_handle in rx_antenna_beam_elevation_line_q.iter() {
+                        if let Some(mut mesh) = meshes.get_mut(mesh_handle) {
+                            update_antenna_beam_footprint_elevation_line_mesh_from_state(
+                                &rx_antenna_beam_footprint_state.inner,
+                                &mut mesh
+                            );
+                        }
+                    }
+                    // Update antenna beam azimuth line mesh in the same time
+                    for mesh_handle in rx_antenna_beam_azimuth_line_q.iter() {
+                        if let Some(mut mesh) = meshes.get_mut(mesh_handle) {
+                            update_antenna_beam_footprint_azimuth_line_mesh_from_state(
+                                &rx_antenna_beam_footprint_state.inner,
+                                &mut mesh
+                            );
+                        }
+                    }
+                    //Update iso-range ellipsoid transform
+                    for mut iso_range_ellipsoid_transform in iso_range_ellipsoid_q.iter_mut() {
+                        *iso_range_ellipsoid_transform = iso_range_ellipsoid_transform_from_state(
+                            &tx_carrier_state.inner.position_m, // OT in world frame
+                            &rx_carrier_state.inner.position_m  // OR in world frame
                         );
                     }
-                }
-                // Update antenna beam elevation line mesh in the same time
-                for mesh_handle in rx_antenna_beam_elevation_line_q.iter() {
-                    if let Some(mut mesh) = meshes.get_mut(mesh_handle) {
-                        update_antenna_beam_footprint_elevation_line_mesh_from_state(
-                            &rx_antenna_beam_footprint_state.inner,
-                            &mut mesh
-                        );
-                    }
-                }
-                // Update antenna beam azimuth line mesh in the same time
-                for mesh_handle in rx_antenna_beam_azimuth_line_q.iter() {
-                    if let Some(mut mesh) = meshes.get_mut(mesh_handle) {
-                        update_antenna_beam_footprint_azimuth_line_mesh_from_state(
-                            &rx_antenna_beam_footprint_state.inner,
-                            &mut mesh
-                        );
-                    }
-                }
-                //Update iso-range ellipsoid transform
-                for mut iso_range_ellipsoid_transform in iso_range_ellipsoid_q.iter_mut() {
-                    *iso_range_ellipsoid_transform = iso_range_ellipsoid_transform_from_state(
-                        &tx_carrier_state.inner.position_m, // OT in world frame
-                        &rx_carrier_state.inner.position_m  // OR in world frame
-                    );
                 }
             }
             if rx_panel_widget.velocity_vector_needs_update {

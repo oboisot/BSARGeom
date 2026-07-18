@@ -20,6 +20,17 @@ const SINC_WIDTH_AT_HALF_POWER: f64 = 0.885892941378904715150369091935531;
 /// The squared value of [`SINC_WIDTH_AT_HALF_POWER`].
 const SINC_WIDTH_AT_HALF_POWER_SQUARED: f64 = 0.784806303584967506070224247343716;
 
+/// Returns `num / den` if `den` is strictly positive, `NaN` otherwise.
+///
+/// All callers pass denominators built from norms or products of non-negative
+/// values, so `den <= 0.0` (or `NaN`) only happens for degenerate geometries
+/// (e.g. zero carrier velocity). Returning `NaN` matches the invalid-state
+/// convention of [`BsarInfos::default`] instead of silently producing `inf`.
+#[inline]
+fn div_or_nan(num: f64, den: f64) -> f64 {
+    if den > 0.0 { num / den } else { f64::NAN }
+}
+
 pub struct BsarInfos {
     ///
     pub range_min_m: f64,
@@ -133,9 +144,9 @@ impl BsarInfos {
                 let lem = SPEED_OF_LIGHT_IN_VACUUM / center_frequency_hz; // wavelength in m
                 self.integration_time_s = if squared_pixels {
                     if ground_resolution {
-                        bandwidth_hz / center_frequency_hz * betag_norm / dbetag_norm
+                        bandwidth_hz / center_frequency_hz * div_or_nan(betag_norm, dbetag_norm)
                     } else {
-                        bandwidth_hz / center_frequency_hz * beta_norm / dbeta_norm
+                        bandwidth_hz / center_frequency_hz * div_or_nan(beta_norm, dbeta_norm)
                     }
                 } else {
                     integration_time_s
@@ -157,18 +168,18 @@ impl BsarInfos {
                 } else {
                     (2.0 * arg.acos()).to_degrees()
                 };
-                // Resolution parameters
-                self.slant_range_resolution_m = 
-                    SINC_WIDTH_AT_HALF_POWER * SPEED_OF_LIGHT_IN_VACUUM / (bandwidth_hz * beta_norm);
-                self.slant_lateral_resolution_m = 
-                    SINC_WIDTH_AT_HALF_POWER * lem / (self.integration_time_s * dbeta_norm);
-                self.ground_range_resolution_m = 
-                    SINC_WIDTH_AT_HALF_POWER * SPEED_OF_LIGHT_IN_VACUUM / (bandwidth_hz * betag_norm);
+                // Resolution parameters (guarded: degenerate geometries yield NaN, not inf)
+                self.slant_range_resolution_m =
+                    div_or_nan(SINC_WIDTH_AT_HALF_POWER * SPEED_OF_LIGHT_IN_VACUUM, bandwidth_hz * beta_norm);
+                self.slant_lateral_resolution_m =
+                    div_or_nan(SINC_WIDTH_AT_HALF_POWER * lem, self.integration_time_s * dbeta_norm);
+                self.ground_range_resolution_m =
+                    div_or_nan(SINC_WIDTH_AT_HALF_POWER * SPEED_OF_LIGHT_IN_VACUUM, bandwidth_hz * betag_norm);
                 self.ground_lateral_resolution_m =
-                    SINC_WIDTH_AT_HALF_POWER * lem / (self.integration_time_s * dbetag_norm);
-                self.resolution_area_m2 = 
-                    SINC_WIDTH_AT_HALF_POWER_SQUARED * SPEED_OF_LIGHT_IN_VACUUM * lem /
-                        (bandwidth_hz * self.integration_time_s * betag.cross(dbetag).length());
+                    div_or_nan(SINC_WIDTH_AT_HALF_POWER * lem, self.integration_time_s * dbetag_norm);
+                self.resolution_area_m2 =
+                    div_or_nan(SINC_WIDTH_AT_HALF_POWER_SQUARED * SPEED_OF_LIGHT_IN_VACUUM * lem,
+                        bandwidth_hz * self.integration_time_s * betag.cross(dbetag).length());
                 // Doppler frequency
                 self.doppler_frequency_hz = (vtx.dot(utxp) + vrx.dot(urxp)) / lem;
                 // Doppler rate
@@ -181,40 +192,12 @@ impl BsarInfos {
                 self.processed_doppler_bandwidth_hz = self.integration_time_s * self.doppler_rate_hzps.abs();
                 // TODO NESZ
             } else {
-                // rxp is a zero vector
-                self.range_min_m = f64::NAN;
-                self.range_max_m = f64::NAN;
-                self.range_center_m = f64::NAN;
-                self.direct_range_m = f64::NAN;
-                self.bistatic_angle_deg = f64::NAN;
-                self.slant_range_resolution_m = f64::NAN;
-                self.slant_lateral_resolution_m = f64::NAN;
-                self.ground_range_resolution_m = f64::NAN;
-                self.ground_lateral_resolution_m = f64::NAN;
-                self.resolution_area_m2 = f64::NAN;
-                self.doppler_frequency_hz = f64::NAN;
-                self.doppler_rate_hzps = f64::NAN;
-                self.integration_time_s = f64::NAN;
-                self.processed_doppler_bandwidth_hz = f64::NAN;
+                // rxp is a zero vector: all fields are invalid (NaN)
+                *self = Self::default();
             }
         } else {
-            self.range_min_m = f64::NAN;
-            self.range_max_m = f64::NAN;
-            self.range_center_m = f64::NAN;
-            self.direct_range_m = f64::NAN;
-            self.bistatic_angle_deg = f64::NAN;
-            self.slant_range_resolution_m = f64::NAN;
-            self.slant_lateral_resolution_m = f64::NAN;
-            self.ground_range_resolution_m = f64::NAN;
-            self.ground_lateral_resolution_m = f64::NAN;
-            self.resolution_area_m2 = f64::NAN;
-            self.doppler_frequency_hz = f64::NAN;
-            self.doppler_rate_hzps = f64::NAN;
-            self.integration_time_s = f64::NAN;
-            self.processed_doppler_bandwidth_hz = f64::NAN;
-            self.prf_min_hz = f64::NAN;
-            self.prf_max_hz = f64::NAN;
-            self.nesz = f64::NAN;
+            // txp is a zero vector: all fields are invalid (NaN)
+            *self = Self::default();
         }
     }
 }
@@ -319,12 +302,12 @@ pub fn doppler_frequency_sg(
     vrx: &DVec3,
 ) -> f64 {
     let mut txp_norm = txp.length_squared();
-    if txp_norm > 0.0 {        
+    if txp_norm > 0.0 {
         let mut rxp_norm = rxp.length_squared();
         if rxp_norm > 0.0 {
             txp_norm = txp_norm.sqrt();
             rxp_norm = rxp_norm.sqrt();
-            let utxp = txp / txp_norm; // Normalized txp            
+            let utxp = txp / txp_norm; // Normalized txp
             let urxp = rxp / rxp_norm; // Normalized rxp
             (vtx.dot(utxp) + vrx.dot(urxp)) / lem
         } else { // rxp is a zero vector
@@ -332,5 +315,117 @@ pub fn doppler_frequency_sg(
         }
     } else { // txp is a zero vector
         f64::NAN
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Relative comparison helper.
+    fn assert_close(value: f64, expected: f64, rel_tol: f64) {
+        assert!(
+            (value - expected).abs() <= rel_tol * expected.abs().max(1e-300),
+            "value = {value}, expected = {expected}"
+        );
+    }
+
+    /// Runs `update()` for a monostatic broadside geometry:
+    /// carrier at range R with velocity orthogonal to the line of sight.
+    fn monostatic_broadside(velocity: f64, tint: f64, squared_pixels: bool) -> BsarInfos {
+        let mut infos = BsarInfos::default();
+        let txp = DVec3::new(0.0, 10_000.0, 0.0); // carrier -> target vector, R = 10 km
+        let vtx = DVec3::new(velocity, 0.0, 0.0); // broadside: v orthogonal to LOS
+        infos.update(
+            &txp, &vtx, &txp, &vtx,
+            &AntennaBeamFootprintState::default(),
+            &AntennaBeamFootprintState::default(),
+            10.0e9,  // 10 GHz
+            300.0e6, // 300 MHz
+            tint,
+            squared_pixels,
+            true
+        );
+        infos
+    }
+
+    #[test]
+    fn monostatic_broadside_sanity() {
+        let r = 10_000.0;
+        let (fc, bandwidth, tint, v) = (10.0e9, 300.0e6, 1.0, 100.0);
+        let lem = SPEED_OF_LIGHT_IN_VACUUM / fc;
+        let infos = monostatic_broadside(v, tint, false);
+        // Monostatic: zero bistatic angle, ranges are twice the slant range
+        assert_close(infos.bistatic_angle_deg, 0.0, 1e-12);
+        assert_close(infos.range_center_m, 2.0 * r, 1e-12);
+        // Footprint points default to the origin => min = max = 2R
+        assert_close(infos.range_min_m, 2.0 * r, 1e-12);
+        assert_close(infos.range_max_m, 2.0 * r, 1e-12);
+        // |beta| = 2 => monostatic slant range resolution k.c/(2B)
+        assert_close(
+            infos.slant_range_resolution_m,
+            SINC_WIDTH_AT_HALF_POWER * SPEED_OF_LIGHT_IN_VACUUM / (2.0 * bandwidth),
+            1e-12
+        );
+        // |dbeta| = 2v/R => slant lateral resolution k.lem.R/(2v.Tint)
+        assert_close(
+            infos.slant_lateral_resolution_m,
+            SINC_WIDTH_AT_HALF_POWER * lem * r / (2.0 * v * tint),
+            1e-12
+        );
+        // Broadside: v is orthogonal to the LOS => zero Doppler frequency
+        assert_close(infos.doppler_frequency_hz, 0.0, 1e-12);
+        // Monostatic broadside Doppler rate: -2v^2/(lem.R)
+        assert_close(infos.doppler_rate_hzps, -2.0 * v * v / (lem * r), 1e-12);
+    }
+
+    #[test]
+    fn zero_velocity_yields_nan_not_inf() {
+        // Regression test: divisions by |dbeta| = 0 used to produce silent inf
+        let infos = monostatic_broadside(0.0, 1.0, false);
+        assert!(infos.slant_lateral_resolution_m.is_nan());
+        assert!(infos.ground_lateral_resolution_m.is_nan());
+        assert!(infos.resolution_area_m2.is_nan());
+        // Range resolution does not depend on velocity: still finite
+        assert!(infos.slant_range_resolution_m.is_finite());
+        // Zero velocity => zero Doppler (semantically correct, not NaN)
+        assert_close(infos.doppler_frequency_hz, 0.0, 1e-12);
+
+        // Squared pixels: the auto integration time is undefined too
+        let infos = monostatic_broadside(0.0, 1.0, true);
+        assert!(infos.integration_time_s.is_nan());
+    }
+
+    #[test]
+    fn nadir_geometry_yields_nan_ground_range_resolution() {
+        // Both carriers at zenith: beta is vertical => ground projection is zero
+        let mut infos = BsarInfos::default();
+        let txp = DVec3::new(0.0, 0.0, -3000.0); // carrier -> target, straight down
+        let vtx = DVec3::new(100.0, 0.0, 0.0);
+        infos.update(
+            &txp, &vtx, &txp, &vtx,
+            &AntennaBeamFootprintState::default(),
+            &AntennaBeamFootprintState::default(),
+            10.0e9, 300.0e6, 1.0, false, true
+        );
+        assert!(infos.ground_range_resolution_m.is_nan()); // |betag| = 0
+        assert!(infos.slant_range_resolution_m.is_finite());
+        assert!(infos.slant_lateral_resolution_m.is_finite()); // |dbeta| > 0
+    }
+
+    #[test]
+    fn zero_position_invalidates_all_fields() {
+        let mut infos = monostatic_broadside(100.0, 1.0, false);
+        assert!(infos.range_center_m.is_finite());
+        // Degenerate call: carrier at the target position
+        infos.update(
+            &DVec3::ZERO, &DVec3::X, &DVec3::Y, &DVec3::X,
+            &AntennaBeamFootprintState::default(),
+            &AntennaBeamFootprintState::default(),
+            10.0e9, 300.0e6, 1.0, false, true
+        );
+        assert!(infos.range_center_m.is_nan());
+        assert!(infos.doppler_frequency_hz.is_nan());
+        assert!(infos.nesz.is_nan());
     }
 }

@@ -2,16 +2,19 @@ use std::f32::consts::FRAC_PI_4;
 
 use bevy::prelude::*;
 use bevy_egui::EguiStartupSet;
-use bevy_panorbit_camera::PanOrbitCamera;
+use bevy_panorbit_camera::{EguiFocusIncludesHover, PanOrbitCamera};
 
 pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems( // see: https://github.com/vladbat00/bevy_egui/blob/main/examples/ui.rs
-            PreStartup,
-            spawn_camera.before(EguiStartupSet::InitContexts),
-        );
+        app.insert_resource(EguiFocusIncludesHover(true)) // required with egui Panels: prevents the camera
+                                                          // from reacting to drags over the side panels
+                                                          // (see: https://github.com/Plonq/bevy_panorbit_camera/issues/75)
+            .add_systems( // see: https://github.com/vladbat00/bevy_egui/blob/main/examples/ui.rs
+                PreStartup,
+                spawn_camera.before(EguiStartupSet::InitContexts),
+            );
     }
 }
 
