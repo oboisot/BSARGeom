@@ -107,14 +107,13 @@ pub fn iso_range_doppler_plane_transform_from_state(
         image
     )?;
     // Update the transform of the IsoRangeDopplerPlaneState
-    let tranform = Transform {
+    let transform = Transform {
         translation: Vec3::new(0.0, 0.1, 0.0), // Slightly above the ground
         rotation: Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2), // Rotate 90 degrees around Y-axis
         scale: Vec3::new(extent as f32, 1.0, extent as f32),
-        ..Default::default()
     };
 
-    Ok(tranform)
+    Ok(transform)
 }
 
 #[derive(Resource)]

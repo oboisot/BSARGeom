@@ -59,7 +59,7 @@ fn spawn_camera(mut commands: Commands) {
             // Set the starting position, relative to focus (overrides camera's transform).
             yaw: Some(-FRAC_PI_4),
             pitch: Some(FRAC_PI_4),
-            radius: Some(25980.76211353316), // = sqrt(HALF_PLANE_SIZE**2 * 3)
+            radius: Some(25_980.762), // = sqrt(HALF_PLANE_SIZE**2 * 3)
             // Set limits on rotation and zoom
             yaw_upper_limit: None,
             yaw_lower_limit: None,

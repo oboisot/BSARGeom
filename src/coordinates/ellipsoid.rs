@@ -57,7 +57,7 @@ impl Ellipsoid {
     /// Note: this is a convenient function for Ellipsoid defined with polar radius rather than flattening parameter.
     /// 
     /// Example:
-    /// ```rust
+    /// ```text
     /// // Initialize a Clarke 1880 Ellipsoid with definition given by (https://epsg.org/ellipsoid_7034/Clarke-1880.html):
     /// let semi_major_axis = 20926202.0 * 0.3047972654; 
     /// let semi_minor_axis = 20854895.0 * 0.3047972654;
@@ -471,5 +471,94 @@ impl LocalCartesian {
         );
         let inverse_transform = transform.inverse();
         (transform, inverse_transform)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn assert_close(value: f64, expected: f64, abs_tol: f64) {
+        assert!(
+            (value - expected).abs() <= abs_tol,
+            "value = {value}, expected = {expected}"
+        );
+    }
+
+    #[test]
+    fn geodetic_to_ecef_reference_points() {
+        let wgs84 = Ellipsoid::WGS84;
+        // Equator / Greenwich meridian: (a, 0, 0)
+        let p = wgs84.to_cartesian_ecef_point(&GeographicPoint::origin());
+        assert_close(p.x, wgs84.equatorial_radius_m(), 1e-9);
+        assert_close(p.y, 0.0, 1e-9);
+        assert_close(p.z, 0.0, 1e-9);
+        // Equator, lon 90 deg: (0, a, 0)
+        let p = wgs84.to_cartesian_ecef_point(&GeographicPoint::from_degrees(90.0, 0.0, 0.0));
+        assert_close(p.x, 0.0, 1e-9);
+        assert_close(p.y, wgs84.equatorial_radius_m(), 1e-9);
+        // North pole: (0, 0, b)
+        let p = wgs84.to_cartesian_ecef_point(&GeographicPoint::from_degrees(0.0, 90.0, 0.0));
+        assert_close(p.z, wgs84.polar_radius_m(), 1e-9);
+        assert_close(p.x.hypot(p.y), 0.0, 1e-9);
+        // Height adds along the surface normal (radial at the equator)
+        let p = wgs84.to_cartesian_ecef_point(&GeographicPoint::from_degrees(0.0, 0.0, 100.0));
+        assert_close(p.x, wgs84.equatorial_radius_m() + 100.0, 1e-9);
+    }
+
+    #[test]
+    fn ecef_to_geodetic_roundtrip() {
+        // Vermeille's closed-form inverse must round-trip to sub-micrometer accuracy
+        let wgs84 = Ellipsoid::WGS84;
+        for &(lon, lat, h) in [
+            (5.93, 43.12, 100.0),      // Mid-latitude
+            (-120.5, -33.87, 12000.0), // Southern hemisphere, airborne
+            (179.99, 89.5, 500.0),     // Near the pole / antimeridian
+            (0.0, 0.0, -100.0),        // Below the surface
+        ].iter() {
+            let gp_in = GeographicPoint::from_degrees(lon, lat, h);
+            let gp_out = wgs84.to_geographic_point(&wgs84.to_cartesian_ecef_point(&gp_in));
+            assert_close(gp_out.lon_deg(), lon, 1e-11);
+            assert_close(gp_out.lat_deg(), lat, 1e-11);
+            assert_close(gp_out.height_m(), h, 1e-7);
+        }
+    }
+
+    #[test]
+    fn line_intersection_hit_and_miss() {
+        let wgs84 = Ellipsoid::WGS84;
+        // Nadir ray from 1 km above the equator hits the surface at (a, 0, 0)
+        let pos = CartesianECEFPoint::new(wgs84.equatorial_radius_m() + 1000.0, 0.0, 0.0);
+        let hit = wgs84.line_intersection(&pos, &DVec3::new(-1.0, 0.0, 0.0));
+        assert_close(hit.x, wgs84.equatorial_radius_m(), 1e-6);
+        assert_close(hit.y, 0.0, 1e-9);
+        assert_close(hit.z, 0.0, 1e-9);
+        // A line that misses the ellipsoid returns the input point unchanged
+        let pos = CartesianECEFPoint::new(2.0 * wgs84.equatorial_radius_m(), 0.0, 0.0);
+        let miss = wgs84.line_intersection(&pos, &DVec3::new(0.0, 0.0, 1.0));
+        assert_eq!(miss, pos);
+    }
+
+    #[test]
+    fn local_cartesian_transforms() {
+        let origin = GeographicPoint::from_degrees(5.93, 43.12, 0.0);
+        let local = LocalCartesian::from_geographic_point(&origin);
+        let origin_ecef = Ellipsoid::WGS84.to_cartesian_ecef_point(&origin);
+        // The local origin maps to the origin ECEF point
+        let p = local.transform_from_enu_point_to_cartesian_ecef_point(&DVec3::ZERO);
+        assert_close(p.distance(origin_ecef), 0.0, 1e-9);
+        // 500 m up (ENU) only changes the geodetic height
+        let gp = local.transform_from_enu_point_to_geographic_point(&DVec3::new(0.0, 0.0, 500.0));
+        assert_close(gp.lon_deg(), 5.93, 1e-11);
+        assert_close(gp.lat_deg(), 43.12, 1e-11);
+        assert_close(gp.height_m(), 500.0, 1e-7);
+        // NED down = -ENU up
+        let gp = local.transform_from_ned_point_to_geographic_point(&DVec3::new(0.0, 0.0, -500.0));
+        assert_close(gp.height_m(), 500.0, 1e-7);
+        // ECEF -> ENU -> ECEF roundtrip on an offset point
+        let offset = origin_ecef + DVec3::new(1000.0, -2000.0, 1500.0);
+        let enu = local.transform_from_cartesian_ecef_point_to_enu_point(&offset);
+        let back = local.transform_from_enu_point_to_cartesian_ecef_point(&enu);
+        assert_close(back.distance(offset), 0.0, 1e-8);
     }
 }

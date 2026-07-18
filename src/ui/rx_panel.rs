@@ -38,21 +38,13 @@ impl Plugin for RxPanelPlugin {
 }
 
 #[derive(Resource)]
+#[derive(Default)]
 pub struct RxPanelWidget {
     pub transform_needs_update: bool,
     pub velocity_vector_needs_update: bool,
     pub system_needs_update: bool,
 }
 
-impl Default for RxPanelWidget {
-    fn default() -> Self {
-        Self {
-            transform_needs_update: false,
-            velocity_vector_needs_update: false,
-            system_needs_update: false
-        }
-    }
-}
 
 impl RxPanelWidget {
     pub fn ui(
@@ -155,10 +147,10 @@ fn update_rx(
          rx_panel_widget.system_needs_update) {
         return; // No need to update transforms if no changes were made
     }
-    for (mut carrier_tranform, carrier_children) in rx_carrier_q.iter_mut() {
+    for (mut carrier_transform, carrier_children) in rx_carrier_q.iter_mut() {
         for carrier_child in carrier_children.iter() {
-            if rx_panel_widget.transform_needs_update {
-                if let Ok((mut antenna_transform, antenna_children)) = rx_antenna_q.get_mut(carrier_child) {
+            if rx_panel_widget.transform_needs_update
+                && let Ok((mut antenna_transform, antenna_children)) = rx_antenna_q.get_mut(carrier_child) {
                     // Update antenna beam width
                     for antenna_beam in antenna_children.iter() {
                         if let Ok(mut antenna_beam_transform) = rx_antenna_beam_q.get_mut(antenna_beam) {
@@ -173,7 +165,7 @@ fn update_rx(
                         &rx_antenna_state.inner
                     );
                     // Update carrier transform
-                    *carrier_tranform = carrier_transform_from_state(
+                    *carrier_transform = carrier_transform_from_state(
                         &mut rx_carrier_state.inner,
                         &rx_antenna_state.inner
                     );
@@ -215,9 +207,8 @@ fn update_rx(
                         );
                     }
                 }
-            }
-            if rx_panel_widget.velocity_vector_needs_update {
-                if let Ok(mut velocity_indicator_transform) = rx_velocity_indicator_q.get_mut(carrier_child) {
+            if rx_panel_widget.velocity_vector_needs_update
+                && let Ok(mut velocity_indicator_transform) = rx_velocity_indicator_q.get_mut(carrier_child) {
                     // Update velocity vector transform
                     *velocity_indicator_transform = velocity_indicator_transform_from_state(
                         &rx_carrier_state.inner
@@ -235,7 +226,6 @@ fn update_rx(
                         &mut rx_antenna_beam_footprint_state.inner,
                     );
                 }
-            }
         }
     }
     // Monostatic case
@@ -252,12 +242,12 @@ fn update_rx(
         }
         if menu_widget.force_rx_system_update {
             // Update iso-range doppler plane transform and texture
-            for mut iso_range_doppler_plane_tranform in iso_range_doppler_q.iter_mut() {
+            for mut iso_range_doppler_plane_transform in iso_range_doppler_q.iter_mut() {
                 for material_handle in iso_range_doppler_material_q.iter() {
-                    if let Some(mut material) = materials.get_mut(material_handle) {
-                        if let Some(ref image_handle) = material.base_color_texture {
-                            if let Some(mut image) = images.get_mut(image_handle) {
-                                if let Ok(transform) = iso_range_doppler_plane_transform_from_state(
+                    if let Some(mut material) = materials.get_mut(material_handle)
+                        && let Some(ref image_handle) = material.base_color_texture {
+                            if let Some(mut image) = images.get_mut(image_handle)
+                                && let Ok(transform) = iso_range_doppler_plane_transform_from_state(
                                     &tx_carrier_state,
                                     &rx_carrier_state,
                                     &tx_antenna_beam_footprint_state.inner,
@@ -266,13 +256,11 @@ fn update_rx(
                                     &mut iso_range_doppler_plane_state
                                 ) {
                                     // Update iso-range doppler plane transform
-                                    *iso_range_doppler_plane_tranform = transform;
+                                    *iso_range_doppler_plane_transform = transform;
                                 };
-                            }
-                            // Update iso-range doppler plane texture with newly caluclated image
+                            // Update iso-range doppler plane texture with newly calculated image
                             material.base_color_texture = Some(image_handle.clone());
                         }
-                    }
                 }
             }
             menu_widget.force_rx_system_update = false;
@@ -290,12 +278,12 @@ fn update_rx(
             &rx_antenna_beam_footprint_state.inner,
         );
         // Update iso-range doppler plane transform and texture
-        for mut iso_range_doppler_plane_tranform in iso_range_doppler_q.iter_mut() {
+        for mut iso_range_doppler_plane_transform in iso_range_doppler_q.iter_mut() {
             for material_handle in iso_range_doppler_material_q.iter() {
-                if let Some(mut material) = materials.get_mut(material_handle) {
-                    if let Some(ref image_handle) = material.base_color_texture {
-                        if let Some(mut image) = images.get_mut(image_handle) {
-                            if let Ok(transform) = iso_range_doppler_plane_transform_from_state(
+                if let Some(mut material) = materials.get_mut(material_handle)
+                    && let Some(ref image_handle) = material.base_color_texture {
+                        if let Some(mut image) = images.get_mut(image_handle)
+                            && let Ok(transform) = iso_range_doppler_plane_transform_from_state(
                                 &tx_carrier_state,
                                 &rx_carrier_state,
                                 &tx_antenna_beam_footprint_state.inner,
@@ -304,13 +292,11 @@ fn update_rx(
                                 &mut iso_range_doppler_plane_state
                             ) {
                                 // Update iso-range doppler plane transform
-                                *iso_range_doppler_plane_tranform = transform;
+                                *iso_range_doppler_plane_transform = transform;
                             };
-                        }
-                        // Update iso-range doppler plane texture with newly caluclated image
+                        // Update iso-range doppler plane texture with newly calculated image
                         material.base_color_texture = Some(image_handle.clone());
                     }
-                }
             }
         }
     }

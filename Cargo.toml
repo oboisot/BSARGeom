@@ -35,7 +35,6 @@ bevy_egui = "0.40"
 egui_extras = { version = "0.34", features = ["image"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
 plotters = "0.3"
-rustc-hash = "2.1"
 
 # Size optimization (see: https://github.com/johnthagen/min-sized-rust)
 [profile.release]

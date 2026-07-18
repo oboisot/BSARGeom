@@ -298,7 +298,7 @@ pub fn update_illumination_time(
             v = (vz * e1x - vx * e1z) / (vx * (e2z - e1z) - vz * (e2x - e1x));
             // note: no guard needed on the division: v = inf or NaN (segment parallel
             // to the velocity, or 0/0) is rejected by the range check below
-            if (v >= 0.0) && (v < 1.0) {
+            if (0.0..1.0).contains(&v) {
                 intersections[count] = DVec3::new(
                     e1x + v * (e2x - e1x),
                     0.0,
@@ -511,8 +511,10 @@ mod tests {
     fn illumination_time_from_ground_track_crossing() {
         let mut carrier = carrier_state(3000.0, 100.0);
         carrier.velocity_vector_mps = DVec3::new(100.0, 0.0, 0.0); // Z-up frame
-        let mut footprint = AntennaBeamFootprintState::default();
-        footprint.points = square_footprint();
+        let mut footprint = AntennaBeamFootprintState {
+            points: square_footprint(),
+            ..Default::default()
+        };
         update_illumination_time(&carrier, &mut footprint);
         // The ground track crosses the square over 200 m at 100 m/s
         assert_close(footprint.illumination_time_s, 2.0, 1e-12);
@@ -524,12 +526,14 @@ mod tests {
         // used to be computed from left-over zero vectors
         let mut carrier = carrier_state(3000.0, 100.0);
         carrier.velocity_vector_mps = DVec3::new(100.0, 0.0, 0.0);
-        let mut footprint = AntennaBeamFootprintState::default();
         // Same square, shifted away from the ground-track line
-        footprint.points = square_footprint()
-            .into_iter()
-            .map(|p| p + DVec3::new(500.0, 0.0, 0.0))
-            .collect();
+        let mut footprint = AntennaBeamFootprintState {
+            points: square_footprint()
+                .into_iter()
+                .map(|p| p + DVec3::new(500.0, 0.0, 0.0))
+                .collect(),
+            ..Default::default()
+        };
         update_illumination_time(&carrier, &mut footprint);
         assert_close(footprint.illumination_time_s, 0.0, 1e-12);
     }
@@ -537,8 +541,10 @@ mod tests {
     #[test]
     fn illumination_time_is_zero_for_zero_velocity() {
         let carrier = carrier_state(3000.0, 0.0);
-        let mut footprint = AntennaBeamFootprintState::default();
-        footprint.points = square_footprint();
+        let mut footprint = AntennaBeamFootprintState {
+            points: square_footprint(),
+            ..Default::default()
+        };
         update_illumination_time(&carrier, &mut footprint);
         assert_close(footprint.illumination_time_s, 0.0, 1e-12);
     }

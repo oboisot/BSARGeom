@@ -23,17 +23,17 @@ pub const ANTENNA_SIZE: f32 = 100.0;  // Size of the antenna
 
 /// ENU to NED rotation quaternion
 pub const ENU_TO_NED: Quat = Quat::from_xyzw(
-    0.707106781186547524400844362104884, // x = sqrt(2) / 2
-    0.707106781186547524400844362104884, // y = sqrt(2) / 2
+    std::f32::consts::FRAC_1_SQRT_2, // x = sqrt(2) / 2
+    std::f32::consts::FRAC_1_SQRT_2, // y = sqrt(2) / 2
     0.0,                // z
     0.0                 // w
 );
 /// ENU to NED rotation quaternion but with f64 accuracy
 pub const ENU_TO_NED_F64: DQuat = DQuat::from_xyzw(
-    0.707106781186547524400844362104884, // x = sqrt(2) / 2
-    0.707106781186547524400844362104884, // y = sqrt(2) / 2
-    0.0,                                 // z
-    0.0                                  // w
+    std::f64::consts::FRAC_1_SQRT_2, // x = sqrt(2) / 2
+    std::f64::consts::FRAC_1_SQRT_2, // y = sqrt(2) / 2
+    0.0,                             // z
+    0.0                              // w
 );
 
 /// Rotation constants to convert from Z-up (Physics) direction to Y-up (Bevy) direction coordinate systems.
@@ -71,16 +71,16 @@ pub const TRANSFORM_TO_Z_UP: Transform = Transform::from_rotation(TO_Z_UP);
 pub const NEG_YAXIS_TO_XAXIS: Quat = Quat::from_xyzw( // = Quat::from_rotation_z(FRAC_PI_2)
     0.0,
     0.0,
-    0.707106781186547524400844362104884, // z = sqrt(2) / 2 = sin((pi/2)/2)
-    0.707106781186547524400844362104884  // w = sqrt(2) / 2 = cos((pi/2)/2)
+    std::f32::consts::FRAC_1_SQRT_2, // z = sqrt(2) / 2 = sin((pi/2)/2)
+    std::f32::consts::FRAC_1_SQRT_2  // w = sqrt(2) / 2 = cos((pi/2)/2)
 );
 
 /// Rotation to align positive Y-axis with X-axis
 pub const POS_YAXIS_TO_XAXIS: Quat = Quat::from_xyzw( // = Quat::from_rotation_z(-FRAC_PI_2)
     0.0,
     0.0,
-    -0.707106781186547524400844362104884, // z = -sqrt(2) / 2 = sin((-pi/2)/2)
-    0.707106781186547524400844362104884   // w = sqrt(2) / 2 = cos((-pi/2)/2)
+    -std::f32::consts::FRAC_1_SQRT_2, // z = -sqrt(2) / 2 = sin((-pi/2)/2)
+    std::f32::consts::FRAC_1_SQRT_2   // w = sqrt(2) / 2 = cos((-pi/2)/2)
 );
 
 // Default materials

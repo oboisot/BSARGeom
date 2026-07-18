@@ -1,4 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
+// Bevy ECS queries and system/spawn functions are inherently wide; these two
+// pedantic thresholds fight the engine's idioms (Bevy itself allows them).
+#![allow(clippy::type_complexity, clippy::too_many_arguments)]
 
 use bevy::prelude::*;
 use bevy_panorbit_camera::PanOrbitCameraPlugin;

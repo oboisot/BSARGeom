@@ -37,11 +37,11 @@ fn div_or_nan(num: f64, den: f64) -> f64 {
 }
 
 pub struct BsarInfos {
-    ///
+    /// The bistatic range extrema over the footprint in meters.
     pub range_min_m: f64,
     pub range_max_m: f64,
     pub range_center_m: f64,
-    ///
+    /// The Transmitter-Receiver direct range in meters.
     pub direct_range_m: f64,
     /// The bistatic angle in degrees.
     pub bistatic_angle_deg: f64,
@@ -55,14 +55,14 @@ pub struct BsarInfos {
     pub doppler_frequency_hz: f64,
     /// The Doppler rate in Hz/s.
     pub doppler_rate_hzps: f64,
-    /// 
+    /// The (effective) integration time in seconds.
     pub integration_time_s: f64,
-    ///
+    /// The processed Doppler bandwidth in Hz.
     pub processed_doppler_bandwidth_hz: f64,
-    ///
+    /// The PRF bounds in Hz (not computed yet).
     pub prf_min_hz: f64,
     pub prf_max_hz: f64,
-    ///
+    /// The Noise-Equivalent Sigma Zero (linear scale).
     pub nesz: f64,
 }
 
@@ -185,8 +185,8 @@ impl BsarInfos {
                 (self.range_min_m,
                     self.range_max_m) = bsar_range_min_max(
                     txp, rxp,
-                    &tx_footprint,
-                    &rx_footprint
+                    tx_footprint,
+                    rx_footprint
                 );
                 // Direct range
                 self.direct_range_m = (txp - rxp).length();
@@ -231,9 +231,9 @@ impl BsarInfos {
     }
 }
 
-/// Commputes the BSAR system min and max ranges in meters
+/// Computes the BSAR system min and max ranges in meters
 /// from Tx or Rx footprint. The used footprint for calculation
-/// is heuristically determined by chooseing the one with the
+/// is heuristically determined by choosing the one with the
 /// smallest `ground_range_swath_m`.
 pub fn bsar_range_min_max(
     txp: &DVec3,

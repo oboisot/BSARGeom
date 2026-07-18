@@ -114,17 +114,11 @@ impl Default for TxAntennaBeamState {
 
 /// Resource to keep old state of Transmitter Antenna Beam Footprint
 #[derive(Resource)]
+#[derive(Default)]
 pub struct TxAntennaBeamFootprintState {
     pub inner: AntennaBeamFootprintState
 }
 
-impl Default for TxAntennaBeamFootprintState {
-    fn default() -> Self {
-        Self {
-            inner: AntennaBeamFootprintState::default()
-        }
-    }
-}
 
 /// Receiver marker component
 #[derive(Component)]
@@ -215,17 +209,11 @@ impl Default for RxAntennaBeamState {
 
 /// Resource to keep old state of Transmitter Antenna Beam Footprint
 #[derive(Resource)]
+#[derive(Default)]
 pub struct RxAntennaBeamFootprintState {
     pub inner: AntennaBeamFootprintState
 }
 
-impl Default for RxAntennaBeamFootprintState {
-    fn default() -> Self {
-        Self {
-            inner: AntennaBeamFootprintState::default()
-        }
-    }
-}
 
 /// Iso-range ellipsoid marker component
 #[derive(Component)]
@@ -237,17 +225,11 @@ pub struct IsoRangeDopplerPlane;
 
 /// Resource to keep state of BSAR system
 #[derive(Resource)]
+#[derive(Default)]
 pub struct BsarInfosState {
     pub inner: BsarInfos
 }
 
-impl Default for BsarInfosState {
-    fn default() -> Self {
-        Self {
-            inner: BsarInfos::default()
-        }
-    }
-}
 
 fn spawn_scene(
     mut commands: Commands,
@@ -378,7 +360,7 @@ fn spawn_scene(
 
     // Iso-range ellipsoid material
     let iso_range_ellipsoid_material = StandardMaterial {
-        base_color: Color::linear_rgba(0.839215686, 0.152941176, 0.156862745, 0.15),
+        base_color: Color::linear_rgba(0.839_215_7, 0.152_941_18, 0.156_862_75, 0.15),
         alpha_mode: AlphaMode::Blend,
         cull_mode: None, // Disable culling to see the beam from all sides
         unlit: true,
@@ -420,8 +402,8 @@ fn spawn_scene(
         &mut materials,
         &mut images
     );
-    if let Some(mut image) = images.get_mut(&iso_range_doppler_plane_image_handle) {
-        if let Ok(transform) = iso_range_doppler_plane_transform_from_state(
+    if let Some(mut image) = images.get_mut(&iso_range_doppler_plane_image_handle)
+        && let Ok(transform) = iso_range_doppler_plane_transform_from_state(
             &tx_carrier_state,
             &rx_carrier_state,
             &tx_antenna_beam_footprint_state.inner,
@@ -435,5 +417,4 @@ fn spawn_scene(
                 .insert(IsoRangeDopplerPlane) // Add IsoRangeDopplerPlane Component marker to entity
                 .insert(Name::new("Iso Range Doppler Plane"));
         }
-    }
 }
