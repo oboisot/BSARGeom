@@ -4,7 +4,7 @@ use bevy::math::DVec3;
 
 use crate::{
     constants::TO_Y_UP_F64,
-    entities::AntennaBeamFootprintState,
+    entities::{AntennaBeamFootprintState, AntennaBeamState},
     scene::{RxCarrierState, TxCarrierState}
 };
 
@@ -13,6 +13,11 @@ use crate::{
 /// [`CODATA`]: https://codata.org/
 /// [`NIST`]: https://pml.nist.gov/cuu/Constants/
 pub const SPEED_OF_LIGHT_IN_VACUUM: f64 = 299792458.0; // m/s
+/// Boltzmann constant `k` \[J.K<sup>-1</sup>\] from [`CODATA`] database on [`NIST`] website.
+///
+/// [`CODATA`]: https://codata.org/
+/// [`NIST`]: https://pml.nist.gov/cuu/Constants/
+pub const BOLTZMANN_CONSTANT: f64 = 1.380649e-23; // J/K
 /// The width of squared normalized cardinal sine function at half height.
 /// 
 /// This constant is twice the positive solution of sinc²(x) = 1/2.
@@ -90,6 +95,8 @@ impl BsarInfos {
         &mut self,
         tx_state: &TxCarrierState,
         rx_state: &RxCarrierState,
+        tx_antenna_beam_state: &AntennaBeamState,
+        rx_antenna_beam_state: &AntennaBeamState,
         tx_footprint: &AntennaBeamFootprintState,
         rx_footprint: &AntennaBeamFootprintState,
     ) {
@@ -105,6 +112,28 @@ impl BsarInfos {
             rx_state.integration_time_s,
             rx_state.squared_pixels, // If `true` the integration time is computed to have squared pixels ignoring input integration_time_s
             rx_state.pixel_resolution.is_ground()
+        );
+        // NESZ (Noise-Equivalent Sigma Zero) from the bistatic radar equation:
+        //
+        //        (4π)³.R_tx².R_rx².k.T_rx.10^((L_tx + F_rx - G_tx - G_rx)/10)
+        // NESZ = ------------------------------------------------------------
+        //                    λ².P_peak.duty_cycle.T_int.A_res
+        //
+        // with duty_cycle = pulse_duration.PRF and A_res the resolution cell area.
+        // Invalid geometries (T_int or A_res NaN) and zero duty cycle yield NaN.
+        let lem = SPEED_OF_LIGHT_IN_VACUUM / (tx_state.center_frequency_ghz * 1e9); // wavelength in m
+        let duty_cycle = tx_state.pulse_duration_us * 1e-6 * tx_state.prf_hz;
+        self.nesz = div_or_nan(
+            64.0 * std::f64::consts::PI.powi(3) *
+                tx_state.inner.position_m.length_squared() * // = R_tx²
+                rx_state.inner.position_m.length_squared() * // = R_rx²
+                BOLTZMANN_CONSTANT * rx_state.noise_temperature_k *
+                10f64.powf(0.1 * (
+                    tx_state.loss_factor_db + rx_state.noise_factor_db -
+                    tx_antenna_beam_state.one_way_gain_dbi - rx_antenna_beam_state.one_way_gain_dbi
+                )),
+            lem * lem * tx_state.peak_power_w * duty_cycle *
+                self.integration_time_s * self.resolution_area_m2
         );
     }
 
@@ -411,6 +440,66 @@ mod tests {
         assert!(infos.ground_range_resolution_m.is_nan()); // |betag| = 0
         assert!(infos.slant_range_resolution_m.is_finite());
         assert!(infos.slant_lateral_resolution_m.is_finite()); // |dbeta| > 0
+    }
+
+    /// Builds the bistatic reference configuration used by the NESZ tests.
+    fn nesz_reference_states() -> (TxCarrierState, RxCarrierState, AntennaBeamState, AntennaBeamState) {
+        let mut tx_state = TxCarrierState::default();
+        tx_state.inner.position_m = DVec3::new(0.0, -8000.0, 6000.0); // R_tx = 10 km
+        tx_state.inner.velocity_vector_mps = DVec3::new(150.0, 0.0, 0.0);
+        tx_state.center_frequency_ghz = 9.65;
+        tx_state.bandwidth_mhz = 300.0;
+        tx_state.pulse_duration_us = 10.0;
+        tx_state.prf_hz = 2000.0; // duty cycle = 0.02
+        tx_state.peak_power_w = 250.0;
+        tx_state.loss_factor_db = 3.0;
+        let mut rx_state = RxCarrierState::default();
+        rx_state.inner.position_m = DVec3::new(3000.0, 0.0, 4000.0); // R_rx = 5 km
+        rx_state.inner.velocity_vector_mps = DVec3::new(0.0, 100.0, 0.0);
+        rx_state.noise_temperature_k = 290.0;
+        rx_state.noise_factor_db = 5.0;
+        rx_state.integration_time_s = 1.0;
+        rx_state.squared_pixels = false;
+        let tx_beam = AntennaBeamState {
+            elevation_beam_width_deg: 20.0,
+            azimuth_beam_width_deg: 20.0,
+            one_way_gain_dbi: 20.0,
+        };
+        let rx_beam = AntennaBeamState {
+            elevation_beam_width_deg: 16.0,
+            azimuth_beam_width_deg: 16.0,
+            one_way_gain_dbi: 16.0,
+        };
+        (tx_state, rx_state, tx_beam, rx_beam)
+    }
+
+    #[test]
+    fn nesz_reference_value() {
+        // Reference values computed independently with the BSARConf (JS
+        // predecessor) compute_nesz convention for this exact geometry
+        let (tx_state, rx_state, tx_beam, rx_beam) = nesz_reference_states();
+        let mut infos = BsarInfos::default();
+        infos.update_from_state(
+            &tx_state, &rx_state, &tx_beam, &rx_beam,
+            &AntennaBeamFootprintState::default(),
+            &AntennaBeamFootprintState::default(),
+        );
+        assert_close(infos.resolution_area_m2, 1.0151823973118719, 1e-12);
+        assert_close(infos.nesz, 6.426137576501484e-3, 1e-12); // = -21.92 dB
+    }
+
+    #[test]
+    fn nesz_is_nan_for_zero_duty_cycle() {
+        let (mut tx_state, rx_state, tx_beam, rx_beam) = nesz_reference_states();
+        tx_state.pulse_duration_us = 0.0; // UI lower bound: no transmitted power
+        let mut infos = BsarInfos::default();
+        infos.update_from_state(
+            &tx_state, &rx_state, &tx_beam, &rx_beam,
+            &AntennaBeamFootprintState::default(),
+            &AntennaBeamFootprintState::default(),
+        );
+        assert!(infos.nesz.is_nan());
+        assert!(infos.resolution_area_m2.is_finite()); // Geometry itself is valid
     }
 
     #[test]

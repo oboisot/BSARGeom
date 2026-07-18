@@ -263,7 +263,13 @@ pub fn bsar_infos_ui(
             ui.end_row();
             // NESZ infos
             ui.label("NESZ:");
-            ui.label(format!("{:.3} dBm²/m²", 10.0*bsar_infos.nesz.log10()));
+            ui.label(
+                if bsar_infos.nesz.is_nan() { // Not computable (degenerate geometry or zero duty cycle)
+                    "-".to_owned()
+                } else {
+                    format!("{:.3} dBm²/m²", 10.0*bsar_infos.nesz.log10())
+                }
+            );
             ui.end_row();
         });
 }

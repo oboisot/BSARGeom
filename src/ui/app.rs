@@ -75,24 +75,37 @@ fn ui_system(
 ) -> Result {
     let ctx = contexts.ctx_mut()?;
 
+    // Root Ui covering the whole viewport: the side panels are laid out inside it
+    // (egui 0.34 deprecates showing panels directly on the Context)
+    let mut viewport_ui = egui::Ui::new(
+        ctx.clone(),
+        "viewport".into(),
+        egui::UiBuilder::new()
+            .layer_id(egui::LayerId::background())
+            .max_rect(ctx.viewport_rect()),
+    );
+
     // Side panel global menu
-    egui::SidePanel::left("menu")
+    egui::Panel::left("menu")
         .resizable(false)
-        .default_width(48.0)
-        .max_width(50.0)
+        .default_size(48.0)
+        .max_size(50.0)
         .show_separator_line(true)
-        .show(ctx, |ui| {
+        .show_inside(&mut viewport_ui, |ui| {
             menu_widget.ui(ui);
+            // Register the remaining empty panel area so that egui reports the pointer
+            // as being over the panel (keeps the camera from reacting, see camera.rs)
+            ui.allocate_rect(ui.available_rect_before_wrap(), egui::Sense::hover());
         }
     );
 
         // Receiver panel
-    egui::SidePanel::right("Receiver")
+    egui::Panel::right("Receiver")
         .resizable(false)
-        .default_width(300.0)
-        .max_width(300.0)
+        .default_size(300.0)
+        .max_size(300.0)
         .show_separator_line(true)
-        .show_animated(ctx, menu_widget.is_rx_panel_opened, |ui| {
+        .show_animated_inside(&mut viewport_ui, menu_widget.is_rx_panel_opened, |ui| {
             rx_panel_widget.ui(
                 ui,
                 &menu_widget,
@@ -101,15 +114,16 @@ fn ui_system(
                 &mut rx_antenna_beam_state,
                 &mut bsar_infos_state,
             );
+            ui.allocate_rect(ui.available_rect_before_wrap(), egui::Sense::hover());
         });
 
     // Transmitter panel
-    egui::SidePanel::left("Transmitter")
+    egui::Panel::left("Transmitter")
         .resizable(false)
-        .default_width(300.0)
-        .max_width(300.0)
+        .default_size(300.0)
+        .max_size(300.0)
         .show_separator_line(true)
-        .show_animated(ctx, menu_widget.is_tx_panel_opened, |ui| {
+        .show_animated_inside(&mut viewport_ui, menu_widget.is_tx_panel_opened, |ui| {
             tx_panel_widget.ui(
                 ui,
                 &mut menu_widget,
@@ -121,6 +135,7 @@ fn ui_system(
                 &mut rx_antenna_state,
                 &mut rx_antenna_beam_state,
             );
+            ui.allocate_rect(ui.available_rect_before_wrap(), egui::Sense::hover());
         });
     // Forces Rx updates in Monostatic case when Tx panel is closed
     if menu_widget.is_monostatic &&

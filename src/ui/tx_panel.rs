@@ -82,6 +82,7 @@ impl TxPanelWidget {
         tx_system_ui(
             ui,
             tx_carrier_state,
+            tx_antenna_beam_state,
             &mut self.system_needs_update
         );
 
@@ -112,6 +113,7 @@ fn update_tx(
         Res<TxAntennaState>,              // tx_antenna_state
         Res<TxAntennaBeamState>,          // tx_antenna_beam_state
         Res<RxCarrierState>,              // rx_carrier_state
+        Res<RxAntennaBeamState>,          // rx_antenna_beam_state
         Res<RxAntennaBeamFootprintState>, // rx_antenna_beam_footprint_state
     ),
     resmut: ( // Mutable resources
@@ -142,6 +144,7 @@ fn update_tx(
         tx_antenna_state,
         tx_antenna_beam_state,
         rx_carrier_state,
+        rx_antenna_beam_state,
         rx_antenna_beam_footprint_state
     ) = res;
     // Extracts mutable resources
@@ -251,6 +254,8 @@ fn update_tx(
         bsar_infos_state.inner.update_from_state(
             &tx_carrier_state,
             &rx_carrier_state,
+            &tx_antenna_beam_state.inner,
+            &rx_antenna_beam_state.inner,
             &tx_antenna_beam_footprint_state.inner,
             &rx_antenna_beam_footprint_state.inner,
         );
@@ -539,6 +544,7 @@ fn tx_carrier_ui(
 fn tx_system_ui(
     ui: &mut egui::Ui,
     tx_carrier_state: &mut TxCarrierState,
+    tx_antenna_beam_state: &mut TxAntennaBeamState,
     system_needs_update: &mut bool,
 ) {
     let mut old_state = 0.0f64;
@@ -670,6 +676,26 @@ fn tx_system_ui(
             )
             .on_hover_text(hover_text);
             if old_state != tx_carrier_state.loss_factor_db {
+                *system_needs_update = true;
+            }
+            ui.end_row();
+
+            // ***** Antenna gain ***** //
+            let hover_text = egui::RichText::new("Sets the transmission antenna one-way power gain (0 - 100 dBi)")
+                .color(egui::Color32::from_rgb(200, 200, 200))
+                .monospace();
+            ui.label("Antenna gain: ").on_hover_text(hover_text.clone());
+            old_state = tx_antenna_beam_state.inner.one_way_gain_dbi;
+            ui.add(
+                egui::DragValue::new(&mut tx_antenna_beam_state.inner.one_way_gain_dbi)
+                    .update_while_editing(false)
+                    .speed(0.1)
+                    .range(0.0..=100.0)
+                    .fixed_decimals(1)
+                    .suffix(" dBi")
+            )
+            .on_hover_text(hover_text);
+            if old_state != tx_antenna_beam_state.inner.one_way_gain_dbi {
                 *system_needs_update = true;
             }
             ui.end_row();

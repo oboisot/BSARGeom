@@ -21,7 +21,7 @@ use crate::{
     scene::{
         BsarInfosState, IsoRangeDopplerPlane, IsoRangeEllipsoid, PixelResolution,
         Rx, RxAntennaBeamFootprintState, RxAntennaBeamState, RxAntennaState, RxCarrierState,
-        TxAntennaBeamFootprintState, TxCarrierState
+        TxAntennaBeamFootprintState, TxAntennaBeamState, TxCarrierState
     },
     ui::MenuWidget,
 };
@@ -88,6 +88,8 @@ impl RxPanelWidget {
         rx_system_ui(
             ui,
             rx_carrier_state,
+            rx_antenna_beam_state,
+            menu_widget.is_monostatic,
             bsar_infos_state,
             &mut self.system_needs_update
         );
@@ -101,8 +103,9 @@ fn update_rx(
         Res<RxAntennaState>,              // rx_antenna_state
         Res<RxAntennaBeamState>,          // rx_antenna_beam_state
         Res<TxCarrierState>,              // tx_carrier_state
+        Res<TxAntennaBeamState>,          // tx_antenna_beam_state
         Res<TxAntennaBeamFootprintState>, // tx_antenna_beam_footprint_state
-    ),    
+    ),
     resmut: ( // Mutable resources
         ResMut<Assets<StandardMaterial>>,    // materials
         ResMut<Assets<Mesh>>,                // meshes
@@ -132,6 +135,7 @@ fn update_rx(
         rx_antenna_state,
         rx_antenna_beam_state,
         tx_carrier_state,
+        tx_antenna_beam_state,
         tx_antenna_beam_footprint_state
     ) = res;
     // Extracts mutable resources
@@ -240,6 +244,8 @@ fn update_rx(
             bsar_infos_state.inner.update_from_state(
                 &tx_carrier_state,
                 &rx_carrier_state,
+                &tx_antenna_beam_state.inner,
+                &rx_antenna_beam_state.inner,
                 &tx_antenna_beam_footprint_state.inner,
                 &rx_antenna_beam_footprint_state.inner,
             );
@@ -278,6 +284,8 @@ fn update_rx(
         bsar_infos_state.inner.update_from_state(
             &tx_carrier_state,
             &rx_carrier_state,
+            &tx_antenna_beam_state.inner,
+            &rx_antenna_beam_state.inner,
             &tx_antenna_beam_footprint_state.inner,
             &rx_antenna_beam_footprint_state.inner,
         );
@@ -566,6 +574,8 @@ fn rx_carrier_ui(
 fn rx_system_ui(
     ui: &mut egui::Ui,
     rx_carrier_state: &mut RxCarrierState,
+    rx_antenna_beam_state: &mut RxAntennaBeamState,
+    is_monostatic: bool,
     bsar_infos_state: &mut BsarInfosState,
     system_needs_update: &mut bool,
 ) {
@@ -582,6 +592,27 @@ fn rx_system_ui(
         .striped(false)
         .spacing([1.0, 5.0])
         .show(ui, |ui| {
+            // ***** Antenna gain ***** //
+            let hover_text = egui::RichText::new("Sets the reception antenna one-way power gain (0 - 100 dBi); mirrors the Tx antenna gain in monostatic mode")
+                .color(egui::Color32::from_rgb(200, 200, 200))
+                .monospace();
+            ui.label("Antenna gain: ").on_hover_text(hover_text.clone());
+            old_state = rx_antenna_beam_state.inner.one_way_gain_dbi;
+            ui.add_enabled(
+                !is_monostatic, // The Rx antenna mirrors the Tx antenna in monostatic mode
+                egui::DragValue::new(&mut rx_antenna_beam_state.inner.one_way_gain_dbi)
+                    .update_while_editing(false)
+                    .speed(0.1)
+                    .range(0.0..=100.0)
+                    .fixed_decimals(1)
+                    .suffix(" dBi")
+            )
+            .on_hover_text(hover_text);
+            if old_state != rx_antenna_beam_state.inner.one_way_gain_dbi {
+                *system_needs_update = true;
+            }
+            ui.end_row();
+
             // ***** Noise temperature ***** //
             let hover_text = egui::RichText::new("Sets the noise temperature of the Receiver's system (0 - 1000 K)")
                 .color(egui::Color32::from_rgb(200, 200, 200))

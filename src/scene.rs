@@ -404,6 +404,8 @@ fn spawn_scene(
     bsar_infos_state.inner.update_from_state(
         &tx_carrier_state,
         &rx_carrier_state,
+        &tx_antenna_beam_state.inner,
+        &rx_antenna_beam_state.inner,
         &tx_antenna_beam_footprint_state.inner,
         &rx_antenna_beam_footprint_state.inner,
     );
