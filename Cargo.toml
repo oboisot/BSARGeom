@@ -26,6 +26,10 @@ features = [
 ]
 
 [dependencies]
+# note: bevy_egui and egui_extras versions are tied to the bevy_egui version that
+# bevy_panorbit_camera's "bevy_egui" feature links against. A mismatch (e.g. app on
+# bevy_egui 0.41 while bevy_panorbit_camera 0.35 uses 0.40) silently duplicates the
+# crate in the dependency tree and breaks camera input blocking over egui areas.
 bevy_panorbit_camera = { version = "0.35", features = ["bevy_egui"] }
 bevy_egui = "0.40"
 egui_extras = { version = "0.34", features = ["image"] }

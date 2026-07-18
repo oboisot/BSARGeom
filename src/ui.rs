@@ -1,5 +1,5 @@
 mod app;
-pub use app::AppPlugin;
+pub use app::{AppPlugin, SidePanelRects};
 
 mod menu;
 pub use menu::{MenuPlugin, MenuWidget};
