@@ -1,9 +1,6 @@
 use std::f32::consts::FRAC_PI_4;
 
-use bevy::{
-    prelude::*,
-    render::view::NoIndirectDrawing
-};
+use bevy::prelude::*;
 use bevy_egui::EguiStartupSet;
 use bevy_panorbit_camera::PanOrbitCamera;
 
@@ -44,7 +41,5 @@ fn spawn_camera(mut commands: Commands) {
             ..default()
         },
         Msaa::default(), // MSAA,
-        NoIndirectDrawing, // disable indirect mode to allow correct rendering on integrated Intel GPU (see: https://github.com/bevyengine/bevy/issues/19000)
-                           // TODO: remove this when bug will be corrected/handled
     ));
 }

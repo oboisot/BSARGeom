@@ -255,7 +255,7 @@ impl LocalCartesian {
         let (transform, inverse_transform) =
             Self::set_ned_to_ecef_transform(&gp, cp);
         Self {
-            origin: (gp, cp.clone()),
+            origin: (gp, *cp),
             transform,
             inverse_transform
         }
@@ -275,7 +275,7 @@ impl LocalCartesian {
     #[inline]
     pub fn set_origin_from_cartesian_ecef_point(&mut self, cp: &CartesianECEFPoint) -> &mut Self {
         let gp = Ellipsoid::WGS84.to_geographic_point(cp);
-        self.origin = (gp.clone(), cp.clone());
+        self.origin = (gp.clone(), *cp);
         (self.transform, self.inverse_transform) =
             Self::set_ned_to_ecef_transform(&gp, cp);
         self

@@ -176,31 +176,31 @@ fn update_rx(
                 }
                 // Update antenna beam footprint mesh in the same time
                 for mesh_handle in rx_antenna_beam_footprint_q.iter() {
-                    if let Some(mesh) = meshes.get_mut(mesh_handle) {
+                    if let Some(mut mesh) = meshes.get_mut(mesh_handle) {
                         update_antenna_beam_footprint_mesh_from_state(
                             &rx_carrier_state.inner,
                             &rx_antenna_state.inner,
                             &rx_antenna_beam_state.inner,
                             &mut rx_antenna_beam_footprint_state.inner,
-                            mesh
+                            &mut mesh
                         );
                     }
                 }
                 // Update antenna beam elevation line mesh in the same time
                 for mesh_handle in rx_antenna_beam_elevation_line_q.iter() {
-                    if let Some(mesh) = meshes.get_mut(mesh_handle) {
+                    if let Some(mut mesh) = meshes.get_mut(mesh_handle) {
                         update_antenna_beam_footprint_elevation_line_mesh_from_state(
                             &rx_antenna_beam_footprint_state.inner,
-                            mesh
+                            &mut mesh
                         );
                     }
                 }
                 // Update antenna beam azimuth line mesh in the same time
                 for mesh_handle in rx_antenna_beam_azimuth_line_q.iter() {
-                    if let Some(mesh) = meshes.get_mut(mesh_handle) {
+                    if let Some(mut mesh) = meshes.get_mut(mesh_handle) {
                         update_antenna_beam_footprint_azimuth_line_mesh_from_state(
                             &rx_antenna_beam_footprint_state.inner,
-                            mesh
+                            &mut mesh
                         );
                     }
                 }
@@ -248,15 +248,15 @@ fn update_rx(
             // Update iso-range doppler plane transform and texture
             for mut iso_range_doppler_plane_tranform in iso_range_doppler_q.iter_mut() {
                 for material_handle in iso_range_doppler_material_q.iter() {
-                    if let Some(material) = materials.get_mut(material_handle) {
+                    if let Some(mut material) = materials.get_mut(material_handle) {
                         if let Some(ref image_handle) = material.base_color_texture {
-                            if let Some(image) = images.get_mut(image_handle) {
+                            if let Some(mut image) = images.get_mut(image_handle) {
                                 if let Ok(transform) = iso_range_doppler_plane_transform_from_state(
                                     &tx_carrier_state,
                                     &rx_carrier_state,
                                     &tx_antenna_beam_footprint_state.inner,
                                     &rx_antenna_beam_footprint_state.inner,
-                                    image,
+                                    &mut image,
                                     &mut iso_range_doppler_plane_state
                                 ) {
                                     // Update iso-range doppler plane transform
@@ -284,15 +284,15 @@ fn update_rx(
         // Update iso-range doppler plane transform and texture
         for mut iso_range_doppler_plane_tranform in iso_range_doppler_q.iter_mut() {
             for material_handle in iso_range_doppler_material_q.iter() {
-                if let Some(material) = materials.get_mut(material_handle) {
+                if let Some(mut material) = materials.get_mut(material_handle) {
                     if let Some(ref image_handle) = material.base_color_texture {
-                        if let Some(image) = images.get_mut(image_handle) {
+                        if let Some(mut image) = images.get_mut(image_handle) {
                             if let Ok(transform) = iso_range_doppler_plane_transform_from_state(
                                 &tx_carrier_state,
                                 &rx_carrier_state,
                                 &tx_antenna_beam_footprint_state.inner,
                                 &rx_antenna_beam_footprint_state.inner,
-                                image,
+                                &mut image,
                                 &mut iso_range_doppler_plane_state
                             ) {
                                 // Update iso-range doppler plane transform

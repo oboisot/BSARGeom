@@ -418,13 +418,13 @@ fn spawn_scene(
         &mut materials,
         &mut images
     );
-    if let Some(image) = images.get_mut(&iso_range_doppler_plane_image_handle) {
+    if let Some(mut image) = images.get_mut(&iso_range_doppler_plane_image_handle) {
         if let Ok(transform) = iso_range_doppler_plane_transform_from_state(
             &tx_carrier_state,
             &rx_carrier_state,
             &tx_antenna_beam_footprint_state.inner,
             &rx_antenna_beam_footprint_state.inner,
-            image,
+            &mut image,
             &mut iso_range_doppler_plane_state
         ) {
             commands

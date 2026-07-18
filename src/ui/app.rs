@@ -32,7 +32,7 @@ fn ui_setup(
     let ctx = contexts.ctx_mut()?;
 
     // Install image loaders for egui
-    egui_extras::install_image_loaders(&ctx); // This gives us image support
+    egui_extras::install_image_loaders(ctx); // This gives us image support
 
     // UI style
     let mut dark_visuals = egui::Theme::Dark.default_visuals();

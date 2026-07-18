@@ -30,7 +30,7 @@ struct WorldGridHelper;
 struct WorldAxesHelper;
 
 fn insert_ambient_light(mut commands: Commands) {
-    let ambient_light = AmbientLight {
+    let ambient_light = GlobalAmbientLight {
         color: Color::WHITE,
         brightness: 1000.0,
         affects_lightmapped_meshes: false,
