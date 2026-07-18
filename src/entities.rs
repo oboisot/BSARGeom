@@ -36,6 +36,7 @@ mod iso_range_doppler_plane;
 pub use iso_range_doppler_plane::{
     spawn_iso_range_doppler_plane,
     iso_range_doppler_plane_transform_from_state,
+    refresh_iso_range_doppler_plane,
     IsoRangeDopplerPlaneState
 };
 

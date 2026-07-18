@@ -1,6 +1,9 @@
 mod app;
 pub use app::{AppPlugin, SidePanelRects};
 
+mod carrier_ui;
+pub use carrier_ui::carrier_ui;
+
 mod menu;
 pub use menu::{MenuPlugin, MenuWidget};
 
