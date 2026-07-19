@@ -7,7 +7,16 @@ use bevy::{
 use bevy_egui::EguiStartupSet;
 use bevy_panorbit_camera::{EguiFocusIncludesHover, PanOrbitCamera};
 
-use crate::ui::SidePanelRects;
+use crate::{
+    entities::Carrier,
+    scene::{Rx, Tx},
+    ui::{CameraFocus, MenuWidget, SidePanelRects},
+};
+
+/// Initial camera viewpoint, also the target of the menu "reset view" button.
+const INITIAL_YAW_RAD: f32 = -FRAC_PI_4;
+const INITIAL_PITCH_RAD: f32 = FRAC_PI_4;
+const INITIAL_RADIUS_M: f32 = 25_980.762; // = sqrt(HALF_PLANE_SIZE**2 * 3)
 
 pub struct CameraPlugin;
 
@@ -19,7 +28,46 @@ impl Plugin for CameraPlugin {
                 PreStartup,
                 spawn_camera.before(EguiStartupSet::InitContexts),
             )
-            .add_systems(Update, block_camera_over_panels);
+            .add_systems(Update, (block_camera_over_panels, update_camera_focus));
+    }
+}
+
+/// Keeps the camera focused on the point selected in the menu (ground origin
+/// or one of the carriers — following it when its parameters move it), and
+/// consumes the one-shot "reset view" request by restoring the initial
+/// viewpoint. `force_update` makes the plugin animate the change even while
+/// camera input is disabled (e.g. the pointer still hovering the menu).
+pub(crate) fn update_camera_focus(
+    mut menu_widget: ResMut<MenuWidget>,
+    tx_carrier_q: Query<&Transform, (With<Tx>, With<Carrier>)>,
+    rx_carrier_q: Query<&Transform, (With<Rx>, With<Carrier>)>,
+    mut pan_orbit_camera_q: Query<&mut PanOrbitCamera>,
+) {
+    // `Free` leaves the focus point alone so panning keeps working; the other
+    // variants pin it (and therefore override any pan).
+    let target_focus = match menu_widget.camera_focus {
+        CameraFocus::Free => None,
+        CameraFocus::Ground => Some(Vec3::ZERO),
+        CameraFocus::Tx => Some(tx_carrier_q.single().map_or(Vec3::ZERO, |t| t.translation)),
+        CameraFocus::Rx => Some(rx_carrier_q.single().map_or(Vec3::ZERO, |t| t.translation)),
+    };
+    let reset_view = menu_widget.reset_view_requested;
+    if reset_view {
+        menu_widget.reset_view_requested = false; // written only when set: avoids spurious change detection
+    }
+    for mut pan_orbit_camera in pan_orbit_camera_q.iter_mut() {
+        if let Some(target_focus) = target_focus
+            && pan_orbit_camera.target_focus != target_focus {
+                pan_orbit_camera.target_focus = target_focus;
+                pan_orbit_camera.force_update = true;
+            }
+        if reset_view {
+            pan_orbit_camera.target_focus = Vec3::ZERO;
+            pan_orbit_camera.target_yaw = INITIAL_YAW_RAD;
+            pan_orbit_camera.target_pitch = INITIAL_PITCH_RAD;
+            pan_orbit_camera.target_radius = INITIAL_RADIUS_M;
+            pan_orbit_camera.force_update = true;
+        }
     }
 }
 
@@ -57,9 +105,9 @@ fn spawn_camera(mut commands: Commands) {
             // Set focal point (what the camera should look at)
             focus: Vec3::ZERO,
             // Set the starting position, relative to focus (overrides camera's transform).
-            yaw: Some(-FRAC_PI_4),
-            pitch: Some(FRAC_PI_4),
-            radius: Some(25_980.762), // = sqrt(HALF_PLANE_SIZE**2 * 3)
+            yaw: Some(INITIAL_YAW_RAD),
+            pitch: Some(INITIAL_PITCH_RAD),
+            radius: Some(INITIAL_RADIUS_M),
             // Set limits on rotation and zoom
             yaw_upper_limit: None,
             yaw_lower_limit: None,

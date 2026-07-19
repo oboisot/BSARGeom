@@ -33,7 +33,11 @@ bevy_panorbit_camera = { version = "0.35", features = ["bevy_egui"] }
 bevy_egui = "0.40"
 egui_extras = { version = "0.34", features = ["image"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
-plotters = "0.3"
+ab_glyph = "0.2"
+# note: egui_plot's version is offset from egui's — 0.35 is the release built
+# against egui 0.34. Using 0.34 (egui 0.33) or 0.36 (egui 0.35) silently
+# duplicates egui in the tree, like the bevy_egui mismatch described above.
+egui_plot = "0.35"
 
 # Size optimization (see: https://github.com/johnthagen/min-sized-rust)
 [profile.release]

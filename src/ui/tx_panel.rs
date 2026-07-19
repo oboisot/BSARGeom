@@ -20,7 +20,7 @@ use crate::{
     scene::{
         BsarInfosState, IsoRangeDopplerPlane, IsoRangeEllipsoid, RxAntennaBeamFootprintState, RxAntennaBeamState, RxAntennaState, RxCarrierState, Tx, TxAntennaBeamFootprintState, TxAntennaBeamState, TxAntennaState, TxCarrierState
     },
-    ui::{carrier_ui, MenuWidget, RxPanelWidget},
+    ui::{carrier_ui, heading_with_reset, MenuWidget, RxPanelWidget},
 };
 
 pub struct TxPanelPlugin;
@@ -71,6 +71,9 @@ impl TxPanelWidget {
             &mut tx_carrier_state.inner,
             &mut tx_antenna_state.inner,
             &mut tx_antenna_beam_state.inner,
+            &TxCarrierState::default().inner,
+            &TxAntennaState::default().inner,
+            &TxAntennaBeamState::default().inner,
             &mut self.transform_needs_update,
             &mut self.velocity_vector_needs_update
         );
@@ -289,9 +292,22 @@ fn tx_system_ui(
     let mut old_state = 0.0f64;
 
     ui.separator();
-    ui.vertical_centered(|ui| ui.label(
-        egui::RichText::new("SYSTEM").strong()
-    ));
+    if heading_with_reset(
+        ui,
+        egui::RichText::new("SYSTEM").strong(),
+        "Resets the System settings to their defaults"
+    ) {
+        let default_state = TxCarrierState::default();
+        tx_carrier_state.center_frequency_ghz = default_state.center_frequency_ghz;
+        tx_carrier_state.bandwidth_mhz = default_state.bandwidth_mhz;
+        tx_carrier_state.pulse_duration_us = default_state.pulse_duration_us;
+        tx_carrier_state.prf_hz = default_state.prf_hz;
+        tx_carrier_state.peak_power_w = default_state.peak_power_w;
+        tx_carrier_state.loss_factor_db = default_state.loss_factor_db;
+        tx_antenna_beam_state.inner.one_way_gain_dbi =
+            TxAntennaBeamState::default().inner.one_way_gain_dbi;
+        *system_needs_update = true;
+    }
     ui.separator();
     // Tx system settings
     egui::Grid::new("tx_system_grid")

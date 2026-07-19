@@ -22,7 +22,7 @@ use crate::{
         Rx, RxAntennaBeamFootprintState, RxAntennaBeamState, RxAntennaState, RxCarrierState,
         TxAntennaBeamFootprintState, TxAntennaBeamState, TxCarrierState
     },
-    ui::{carrier_ui, MenuWidget},
+    ui::{carrier_ui, heading_with_reset, MenuWidget},
 };
 
 
@@ -71,6 +71,9 @@ impl RxPanelWidget {
                     &mut rx_carrier_state.inner,
                     &mut rx_antenna_state.inner,
                     &mut rx_antenna_beam_state.inner,
+                    &RxCarrierState::default().inner,
+                    &RxAntennaState::default().inner,
+                    &RxAntennaBeamState::default().inner,
                     &mut self.transform_needs_update,
                     &mut self.velocity_vector_needs_update
                 );
@@ -301,9 +304,22 @@ fn rx_system_ui(
     let mut old_state = 0.0f64;
 
     ui.separator();
-    ui.vertical_centered(|ui| ui.label(
-        egui::RichText::new("SYSTEM").strong()
-    ));
+    if heading_with_reset(
+        ui,
+        egui::RichText::new("SYSTEM").strong(),
+        "Resets the System settings to their defaults"
+    ) {
+        let default_state = RxCarrierState::default();
+        rx_carrier_state.noise_temperature_k = default_state.noise_temperature_k;
+        rx_carrier_state.noise_factor_db = default_state.noise_factor_db;
+        rx_carrier_state.integration_time_s = default_state.integration_time_s;
+        rx_carrier_state.squared_pixels = default_state.squared_pixels;
+        rx_carrier_state.pixel_resolution = default_state.pixel_resolution;
+        // In monostatic mode this is re-mirrored from Tx in the same frame
+        rx_antenna_beam_state.inner.one_way_gain_dbi =
+            RxAntennaBeamState::default().inner.one_way_gain_dbi;
+        *system_needs_update = true;
+    }
     ui.separator();
     // Rx system settings
     egui::Grid::new("rx_system_grid")

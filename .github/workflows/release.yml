@@ -58,11 +58,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Install system dependencies (Linux container)
-        if: ${{ matrix.container }}
-        # fontconfig headers are required to build plotters' font support
-        run: yum install -y fontconfig-devel
-
       - name: Install rustup (Linux container)
         if: ${{ matrix.container }}
         run: |

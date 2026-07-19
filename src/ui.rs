@@ -2,10 +2,13 @@ mod app;
 pub use app::{AppPlugin, SidePanelRects};
 
 mod carrier_ui;
-pub use carrier_ui::carrier_ui;
+pub use carrier_ui::{carrier_ui, heading_with_reset};
+
+mod gaf;
+pub use gaf::{show_gaf_window, GafState};
 
 mod menu;
-pub use menu::{MenuPlugin, MenuWidget};
+pub use menu::{CameraFocus, MenuPlugin, MenuWidget};
 
 mod infos;
 pub use infos::{bsar_infos_ui, carrier_infos_ui};
@@ -99,5 +102,65 @@ mod tests {
         // Flags must have been consumed by the update systems
         assert!(!app.world().resource::<TxPanelWidget>().velocity_vector_needs_update);
         assert!(!app.world().resource::<RxPanelWidget>().velocity_vector_needs_update);
+    }
+
+    /// The camera focus system follows the menu selection (camera tracks the
+    /// Tx carrier) and the one-shot "reset view" request restores the initial
+    /// viewpoint targets.
+    #[test]
+    fn camera_focus_follows_menu_selection_and_view_reset() {
+        use bevy_panorbit_camera::PanOrbitCamera;
+
+        use crate::entities::Carrier;
+        use crate::scene::Tx;
+        use super::CameraFocus;
+
+        let mut app = test_app();
+        app.add_systems(Update, crate::camera::update_camera_focus);
+        let camera = app.world_mut().spawn(PanOrbitCamera::default()).id();
+        app.update(); // Startup: spawns the scene
+
+        // Default is Free: the camera focus must be left untouched so the user
+        // keeps orbit/pan/zoom control.
+        assert_eq!(
+            app.world().resource::<MenuWidget>().camera_focus,
+            CameraFocus::Free
+        );
+        let user_panned_focus = Vec3::new(123.0, 45.0, -67.0);
+        app.world_mut()
+            .get_mut::<PanOrbitCamera>(camera)
+            .unwrap()
+            .target_focus = user_panned_focus;
+        app.update();
+        assert_eq!(
+            app.world().get::<PanOrbitCamera>(camera).unwrap().target_focus,
+            user_panned_focus,
+            "Free focus must not override a user pan"
+        );
+
+        // Focus the Tx carrier: the target must follow its (non-origin) position
+        app.world_mut().resource_mut::<MenuWidget>().camera_focus = CameraFocus::Tx;
+        app.update();
+        let tx_translation = {
+            let mut tx_carrier_q = app
+                .world_mut()
+                .query_filtered::<&Transform, (With<Tx>, With<Carrier>)>();
+            tx_carrier_q.single(app.world()).unwrap().translation
+        };
+        assert!(tx_translation.length() > 0.0);
+        let pan_orbit_camera = app.world().get::<PanOrbitCamera>(camera).unwrap();
+        assert_eq!(pan_orbit_camera.target_focus, tx_translation);
+
+        // Reset view: free camera, origin focus and initial orientation/zoom
+        {
+            let mut menu_widget = app.world_mut().resource_mut::<MenuWidget>();
+            menu_widget.camera_focus = CameraFocus::Free;
+            menu_widget.reset_view_requested = true;
+        }
+        app.update();
+        let pan_orbit_camera = app.world().get::<PanOrbitCamera>(camera).unwrap();
+        assert_eq!(pan_orbit_camera.target_focus, Vec3::ZERO);
+        assert!(pan_orbit_camera.force_update);
+        assert!(!app.world().resource::<MenuWidget>().reset_view_requested);
     }
 }

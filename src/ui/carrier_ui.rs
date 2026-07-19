@@ -3,13 +3,32 @@ use bevy_egui::egui;
 use crate::{
     constants::{MAX_HEIGHT_M, MAX_VELOCITY_MPS},
     entities::{AntennaBeamState, AntennaState, CarrierState},
+    ui::menu::RESET_ICON,
 };
+
+/// Section heading row: centered title with a small right-aligned "↺" reset
+/// button. Returns `true` when the reset button was clicked.
+pub fn heading_with_reset(ui: &mut egui::Ui, title: egui::RichText, hover: &str) -> bool {
+    let hover_text = egui::RichText::new(hover)
+        .color(egui::Color32::from_rgb(200, 200, 200))
+        .monospace();
+    let row = ui.vertical_centered(|ui| ui.label(title)).response;
+    let button_rect = egui::Rect::from_center_size(
+        egui::pos2(row.rect.right() - 12.0, row.rect.center().y),
+        egui::vec2(18.0, row.rect.height()),
+    );
+    ui.put(button_rect, egui::Button::image(RESET_ICON).frame_when_inactive(false))
+        .on_hover_text(hover_text)
+        .clicked()
+}
 
 /// Carrier + antenna geometry settings UI, shared by the Transmitter and
 /// Receiver panels.
 ///
 /// `id_salt` ("tx" | "rx") rebuilds the historical egui grid ids
 /// ("tx_carrier_grid", ...) so widget memory is preserved; it must not change.
+/// The `default_*` states are the side-specific defaults restored by the
+/// per-section reset buttons.
 pub fn carrier_ui(
     ui: &mut egui::Ui,
     id_salt: &str,
@@ -17,6 +36,9 @@ pub fn carrier_ui(
     carrier_state: &mut CarrierState,
     antenna_state: &mut AntennaState,
     antenna_beam_state: &mut AntennaBeamState,
+    default_carrier_state: &CarrierState,
+    default_antenna_state: &AntennaState,
+    default_antenna_beam_state: &AntennaBeamState,
     transform_needs_update: &mut bool,
     velocity_vector_needs_update: &mut bool,
 )  {
@@ -31,9 +53,21 @@ pub fn carrier_ui(
     ui.separator();
 
     ui.separator();
-    ui.vertical_centered(|ui| ui.label(
-        egui::RichText::new("CARRIER").strong()
-    ));
+    if heading_with_reset(
+        ui,
+        egui::RichText::new("CARRIER").strong(),
+        "Resets the Carrier settings to their defaults"
+    ) {
+        // Only the fields edited in this section (derived fields are
+        // recomputed by the update systems from the flags below)
+        carrier_state.height_m = default_carrier_state.height_m;
+        carrier_state.velocity_mps = default_carrier_state.velocity_mps;
+        carrier_state.heading_deg = default_carrier_state.heading_deg;
+        carrier_state.elevation_deg = default_carrier_state.elevation_deg;
+        carrier_state.bank_deg = default_carrier_state.bank_deg;
+        *transform_needs_update = true;
+        *velocity_vector_needs_update = true;
+    }
     ui.separator();
 
     // Carrier settings
@@ -145,7 +179,16 @@ pub fn carrier_ui(
     ui.separator();
 
     // Antenna orientation settings
-    ui.vertical_centered(|ui| ui.label("Orientation"));
+    if heading_with_reset(
+        ui,
+        egui::RichText::new("Orientation"),
+        "Resets the Antenna orientation to its defaults"
+    ) {
+        antenna_state.heading_deg = default_antenna_state.heading_deg;
+        antenna_state.elevation_deg = default_antenna_state.elevation_deg;
+        antenna_state.bank_deg = default_antenna_state.bank_deg;
+        *transform_needs_update = true;
+    }
     ui.separator();
 
     egui::Grid::new(format!("{id_salt}_antenna_orientation_grid"))
@@ -215,7 +258,16 @@ pub fn carrier_ui(
         });
 
     ui.separator();
-    ui.vertical_centered(|ui| ui.label("Beamwidth (half-power)"));
+    if heading_with_reset(
+        ui,
+        egui::RichText::new("Beamwidth (half-power)"),
+        "Resets the Antenna beamwidths to their defaults"
+    ) {
+        // Only the beamwidths: the antenna gain belongs to the SYSTEM section
+        antenna_beam_state.elevation_beam_width_deg = default_antenna_beam_state.elevation_beam_width_deg;
+        antenna_beam_state.azimuth_beam_width_deg = default_antenna_beam_state.azimuth_beam_width_deg;
+        *transform_needs_update = true;
+    }
     ui.separator();
     // Antenna beamwidth settings
     egui::Grid::new(format!("{id_salt}_antenna_beamwidth_grid"))
