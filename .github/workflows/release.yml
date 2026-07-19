@@ -1,5 +1,4 @@
-# see: https://github.com/taiki-e/create-gh-release-action
-#      https://github.com/taiki-e/upload-rust-binary-action
+# see: https://github.com/softprops/action-gh-release
 
 name: BSARGeom Release
 
@@ -12,9 +11,9 @@ on:
       - '[0-9]+.*'
 
 jobs:
-  # Create the release once, with its notes extracted from the matching
-  # CHANGELOG.md section, before the per-target upload jobs run — two jobs
-  # racing to create the same release can drop the generated notes.
+  # Create the release (body + auto-generated notes) once, before the per-target
+  # legs upload their assets — several jobs racing to create the same release
+  # can drop the `generate_release_notes` output.
   create-release:
     name: Create release
     runs-on: ubuntu-latest
@@ -22,11 +21,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Create GitHub release from CHANGELOG
-        uses: taiki-e/create-gh-release-action@v1
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v3
         with:
-          changelog: CHANGELOG.md
-          title: BSARGeom $version
+          body: |
+            `BSARGeom` is a Rust 3D bistatic SAR geometry visualizer.
+            For more details on this release see [CHANGELOG](./CHANGELOG.md).
+          name: BSARGeom ${{ github.ref_name }} release
+          generate_release_notes: true
           token: ${{ secrets.GITHUB_TOKEN }}
 
   dist:
@@ -43,8 +45,12 @@ jobs:
             # (see: https://github.com/pypa/manylinux)
             container: quay.io/pypa/manylinux_2_28_x86_64
           - os: macos-latest
-            # Universal binary: x86_64 (Intel) + aarch64 (Apple Silicon)
-            target: universal-apple-darwin
+            # Intel binary, cross-compiled from the arm64 runner
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            # Apple Silicon binary (macos-latest runners are arm64)
+            target: aarch64-apple-darwin
+
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
 
@@ -67,14 +73,35 @@ jobs:
         run: |
           rustup update --no-self-update stable
           rustup default stable
+          rustup target add ${{ matrix.target }}
 
-      - name: Add macOS universal targets
-        if: ${{ matrix.target == 'universal-apple-darwin' }}
-        run: rustup target add x86_64-apple-darwin aarch64-apple-darwin
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Build and upload binary
-        uses: taiki-e/upload-rust-binary-action@v1
+      - name: Package release asset
+        shell: bash
+        run: |
+          mkdir -p target/dist
+          case "${{ matrix.target }}" in
+            *windows*)
+              # Bare renamed executable: nothing to unpack on Windows
+              cp target/${{ matrix.target }}/release/bsargeom.exe target/dist/bsargeom-${{ matrix.target }}.exe
+              ;;
+            *)
+              # tar.gz keeps the executable permission (a bare downloaded binary
+              # loses it and would need a manual `chmod +x`) and compresses the
+              # download
+              tar czf target/dist/bsargeom-${{ matrix.target }}.tar.gz -C target/${{ matrix.target }}/release bsargeom
+              ;;
+          esac
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v3
         with:
-          bin: bsargeom
-          target: ${{ matrix.target }}
+          files: target/dist/*
+          body: |
+            `BSARGeom` is a Rust 3D bistatic SAR geometry visualizer.
+            For more details on this release see [CHANGELOG](./CHANGELOG.md).
+          name: BSARGeom ${{ github.ref_name }} release
+          generate_release_notes: true
           token: ${{ secrets.GITHUB_TOKEN }}
