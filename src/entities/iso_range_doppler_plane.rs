@@ -18,7 +18,7 @@ use crate::{
 const MAX_PLANE_LENGTH: f64 = 2.0 * HALF_PLANE_LENGTH as f64;
 const TEXTURE_WIDTH: usize  = 2048;
 const TEXTURE_HEIGHT: usize = 2048;
-const GRID_SIZE: usize = 251;
+const GRID_SIZE: usize = 151; // 251; // Note: with anti-aliasing, 151² grid points is large enough to produce a 2048² texture with no visible pixelation
 const NLEVELS: usize = 50;
 // Colors (R, G, B) for the ground, the IsoRange and the IsoDoppler contours
 const GROUND_GREY_RGB: (u8, u8, u8) = (128, 128, 128);

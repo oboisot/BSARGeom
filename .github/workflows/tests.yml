@@ -1,11 +1,11 @@
 name: Tests
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
-
+  # push:
+  #   branches:
+  #     - main
+  
 env:
   CARGO_TERM_COLOR: always
 

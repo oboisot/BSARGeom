@@ -1,6 +1,6 @@
 [package]
 name = "bsargeom"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2024"
 
 [dependencies.bevy]
@@ -8,7 +8,12 @@ version = "0.19"
 default-features = false
 # Fine-grained features kept on purpose: the curated collections ("3d", "3d_api",
 # "common_api", ...) all pull subsystems this app doesn't use (gltf, picking, scene,
-# gamepad, text/fonts, clipboard, wayland, animation) and would grow the wasm binary.
+# gamepad, text/fonts, clipboard, animation) and would grow the wasm binary.
+# Both Linux windowing backends are enabled: winit picks Wayland when a compositor
+# is present and falls back to X11 otherwise, so a single binary is sharp on
+# HiDPI Wayland sessions instead of going through XWayland. `winit/wayland` uses
+# the pure-Rust wayland stack, so this adds no system library to build or run
+# (cost measured on this crate: +1.6 MiB, +3.1% of the release binary).
 features = [
     "bevy_pbr",
     "bevy_render",
@@ -19,9 +24,9 @@ features = [
     "sysinfo_plugin",
     "mouse",
     "keyboard",
-    # "webgl2",
     "webgpu",
     "x11",
+    "wayland",
 ]
 
 [dependencies]

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-19
+
 ### Added
 
 - Camera focus toggle in the menu (Ground / Tx / Rx) that follows the selected
@@ -19,9 +21,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   chosen per family for readability (m/km, Hz/kHz) and decluttering. Labels are
   rotated to follow their contour and carry a ground-colored halo that
   interrupts the line underneath, like plotly's inline contour labels.
+- Normalized Generalized Ambiguity Function (GAF) plot, opened from a menu
+  button, showing the point-target response with its −3, −6, −10, −13 and
+  −20 dB resolution contours (cross-validated bit-exact against the BSARConf
+  reference), framed by `egui_plot` with metric Easting/Northing axes, grid,
+  zoom and pan. The iso-dB contours are drawn as vector plot lines over the
+  intensity heatmap, so they stay crisp at any zoom and can be toggled from the
+  plot legend. The window is freely draggable and resizable, the plot following
+  the window size.
 
 ### Changed
 
+- Linux builds now enable both the `x11` and `wayland` Bevy backends: winit
+  selects Wayland when a compositor is available and falls back to X11, so the
+  window is natively scaled on Wayland sessions instead of going through
+  XWayland.
 - Iso-Doppler contours are drawn thinner than the iso-Range ones so the two
   families stay distinguishable where they cross.
 - The iso-range/iso-Doppler contours are rasterized by a small anti-aliased
@@ -32,14 +46,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`contour::march_levels`) rather than one full grid scan per level. Together
   with the rasterizer change the ground texture rebuild went from ~82 ms to
   ~51 ms per update, despite now being anti-aliased.
-- Normalized Generalized Ambiguity Function (GAF) plot, opened from a menu
-  button, showing the point-target response with its −3, −6, −10, −13 and
-  −20 dB resolution contours (cross-validated bit-exact against the BSARConf
-  reference), framed by `egui_plot` with metric Easting/Northing axes, grid,
-  zoom and pan. The iso-dB contours are drawn as vector plot lines over the
-  intensity heatmap, so they stay crisp at any zoom and can be toggled from the
-  plot legend. The window is freely draggable and resizable, the plot following
-  the window size.
+- Contour/label text is now rasterized from an embedded DejaVu Sans font via
+  `ab_glyph`, replacing the `plotters` default font backend (which cannot draw
+  text on the web/wasm target); the native fontconfig build dependency is gone.
 
 ### Fixed
 
@@ -48,11 +57,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rasterizer must not flip it again. Iso-Doppler labels consequently showed the
   sign of the opposite contour (positive values on dashed lines and vice versa).
 
-### Changed
-
-- Contour/label text is now rasterized from an embedded DejaVu Sans font via
-  `ab_glyph`, replacing the `plotters` default font backend (which cannot draw
-  text on the web/wasm target); the native fontconfig build dependency is gone.
 
 ## [1.0.0] - 2026-07-19
 
@@ -84,5 +88,6 @@ First stable release.
 - Regression test suite covering the BSAR formulas, footprint geometry, contour
   extraction, geodesy conversions, and the monostatic update pipeline.
 
-[unreleased]: https://github.com/oboisot/BSARGeom/compare/1.0.0...HEAD
+[unreleased]: https://github.com/oboisot/BSARGeom/compare/1.1.0...HEAD
+[1.1.0]: https://github.com/oboisot/BSARGeom/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/oboisot/BSARGeom/releases/tag/1.0.0
