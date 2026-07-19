@@ -1,5 +1,6 @@
 use bevy::{
     asset::RenderAssetUsages,
+    ecs::query::QueryFilter,
     math::DVec3,
     prelude::*,
     render::render_resource::{Extent3d, TextureDimension, TextureFormat}
@@ -17,7 +18,7 @@ use crate::{
     contour::{march, Field},
     constants::HALF_PLANE_LENGTH,
     entities::AntennaBeamFootprintState,
-    scene::{TxCarrierState, RxCarrierState},
+    scene::{IsoRangeDopplerPlane, TxCarrierState, RxCarrierState},
 };
 
 const MAX_PLANE_LENGTH: f64 = 2.0 * HALF_PLANE_LENGTH as f64;
@@ -89,8 +90,8 @@ pub fn iso_range_doppler_plane_transform_from_state(
     image: &mut Image,
     iso_range_doppler_plane_state: &mut IsoRangeDopplerPlaneState,
 ) -> Result<Transform, Box<dyn std::error::Error>> {
-    let lem = tx_carrier_state.center_frequency_ghz * 1e9 /
-        SPEED_OF_LIGHT_IN_VACUUM;
+    let lem = SPEED_OF_LIGHT_IN_VACUUM /
+        (tx_carrier_state.center_frequency_ghz * 1e9); // wavelength λ [m] (= c/f, consistent with bsar.rs)
     let extent = f64::min(
         MAX_PLANE_LENGTH,
         2.1 * tx_antenna_beam_footprint_state.ground_max_extent_m.max(
@@ -107,14 +108,51 @@ pub fn iso_range_doppler_plane_transform_from_state(
         image
     )?;
     // Update the transform of the IsoRangeDopplerPlaneState
-    let tranform = Transform {
+    let transform = Transform {
         translation: Vec3::new(0.0, 0.1, 0.0), // Slightly above the ground
         rotation: Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2), // Rotate 90 degrees around Y-axis
         scale: Vec3::new(extent as f32, 1.0, extent as f32),
-        ..Default::default()
     };
 
-    Ok(tranform)
+    Ok(transform)
+}
+
+/// Recomputes the iso-range/iso-Doppler plane texture and transform from the
+/// current Tx/Rx states. Shared by the Tx and Rx panel update systems; generic
+/// over the transform-query filter since each system disambiguates its
+/// `&mut Transform` queries with its own `Without<...>` chain.
+pub fn refresh_iso_range_doppler_plane<F: QueryFilter>(
+    materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
+    tx_carrier_state: &TxCarrierState,
+    rx_carrier_state: &RxCarrierState,
+    tx_antenna_beam_footprint_state: &AntennaBeamFootprintState,
+    rx_antenna_beam_footprint_state: &AntennaBeamFootprintState,
+    iso_range_doppler_plane_state: &mut IsoRangeDopplerPlaneState,
+    iso_range_doppler_q: &mut Query<&mut Transform, F>,
+    iso_range_doppler_material_q: &Query<&MeshMaterial3d<StandardMaterial>, With<IsoRangeDopplerPlane>>,
+) {
+    for mut iso_range_doppler_plane_transform in iso_range_doppler_q.iter_mut() {
+        for material_handle in iso_range_doppler_material_q.iter() {
+            if let Some(mut material) = materials.get_mut(material_handle)
+                && let Some(ref image_handle) = material.base_color_texture {
+                    if let Some(mut image) = images.get_mut(image_handle)
+                        && let Ok(transform) = iso_range_doppler_plane_transform_from_state(
+                            tx_carrier_state,
+                            rx_carrier_state,
+                            tx_antenna_beam_footprint_state,
+                            rx_antenna_beam_footprint_state,
+                            &mut image,
+                            iso_range_doppler_plane_state
+                        ) {
+                            // Update iso-range doppler plane transform
+                            *iso_range_doppler_plane_transform = transform;
+                        };
+                    // Update iso-range doppler plane texture with newly calculated image
+                    material.base_color_texture = Some(image_handle.clone());
+                }
+        }
+    }
 }
 
 #[derive(Resource)]

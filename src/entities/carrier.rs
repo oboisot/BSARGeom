@@ -5,7 +5,7 @@ use bevy::{
 
 use crate::{
     constants::{
-        ANTENNA_SIZE, CARRIER_SIZE, CONE_LENGTH,
+        ANTENNA_SIZE, CARRIER_SIZE, CONE_LENGTH, MAX_BORESIGHT_RANGE_M,
         ENU_TO_NED_F64, NEG_YAXIS_TO_XAXIS, POS_YAXIS_TO_XAXIS, TO_Y_UP,
     },
     entities::{
@@ -240,7 +240,9 @@ pub fn carrier_transform_from_state(
     ).normalize();
 
     let t = if carrier_state.height_m > 0.0 {
-        carrier_state.height_m / ax.z
+        // Clamp to keep the carrier position finite when the boresight
+        // is horizontal (ax.z ~ 0) or points above the horizon
+        (carrier_state.height_m / ax.z).clamp(-MAX_BORESIGHT_RANGE_M, MAX_BORESIGHT_RANGE_M)
     } else {
         0.0
     };
@@ -347,4 +349,62 @@ pub fn update_velocity_vector(
             0.0,
             0.0
         );
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn assert_close(value: f64, expected: f64, abs_tol: f64) {
+        assert!(
+            (value - expected).abs() <= abs_tol,
+            "value = {value}, expected = {expected}"
+        );
+    }
+
+    #[test]
+    fn carrier_position_from_45_deg_depression() {
+        // Right-looking antenna at 45 deg depression from 3000 m: the boresight
+        // must intersect the ground at the origin with the carrier 3000 m away
+        let mut carrier = CarrierState {
+            heading_deg: 0.0,
+            elevation_deg: 0.0,
+            bank_deg: 0.0,
+            height_m: 3000.0,
+            velocity_mps: 100.0,
+            position_m: DVec3::ZERO,
+            velocity_vector_mps: DVec3::ZERO,
+        };
+        let antenna = AntennaState { heading_deg: 90.0, elevation_deg: -45.0, bank_deg: 0.0 };
+        carrier_transform_from_state(&mut carrier, &antenna);
+        // Carrier heading North looking East(-down): placed West of the target
+        assert_close(carrier.position_m.x, -3000.0, 1e-9);
+        assert_close(carrier.position_m.y, 0.0, 1e-9);
+        assert_close(carrier.position_m.z, 3000.0, 1e-12);
+        // Velocity follows the carrier x-axis (North in NED) => +y in ENU
+        assert_close(carrier.velocity_vector_mps.x, 0.0, 1e-9);
+        assert_close(carrier.velocity_vector_mps.y, 100.0, 1e-9);
+        assert_close(carrier.velocity_vector_mps.z, 0.0, 1e-9);
+    }
+
+    #[test]
+    fn horizontal_boresight_is_clamped_finite() {
+        // Regression test: a horizontal boresight (ax.z = 0) used to place the
+        // carrier at an infinite position (division by zero)
+        let mut carrier = CarrierState {
+            heading_deg: 0.0,
+            elevation_deg: 0.0,
+            bank_deg: 0.0,
+            height_m: 3000.0,
+            velocity_mps: 100.0,
+            position_m: DVec3::ZERO,
+            velocity_vector_mps: DVec3::ZERO,
+        };
+        let antenna = AntennaState { heading_deg: 0.0, elevation_deg: 0.0, bank_deg: 0.0 };
+        let transform = carrier_transform_from_state(&mut carrier, &antenna);
+        assert!(carrier.position_m.is_finite());
+        assert!(transform.translation.is_finite());
+        // The ground offset is clamped to the beam-cone length
+        let ground_offset = (carrier.position_m.x.powi(2) + carrier.position_m.y.powi(2)).sqrt();
+        assert!(ground_offset <= crate::constants::MAX_BORESIGHT_RANGE_M);
+    }
 }

@@ -1,31 +1,39 @@
 [package]
 name = "bsargeom"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 
 [dependencies.bevy]
-version = "0.17"
-default-features = false 
+version = "0.19"
+default-features = false
+# Fine-grained features kept on purpose: the curated collections ("3d", "3d_api",
+# "common_api", ...) all pull subsystems this app doesn't use (gltf, picking, scene,
+# gamepad, text/fonts, clipboard, wayland, animation) and would grow the wasm binary.
 features = [
     "bevy_pbr",
-    "bevy_render", 
+    "bevy_render",
     "bevy_winit",
+    "bevy_window",
     "multi_threaded",
     "tonemapping_luts",
     "sysinfo_plugin",
+    "mouse",
+    "keyboard",
     # "webgl2",
     "webgpu",
     "x11",
-    # "zstd"
 ]
 
 [dependencies]
-bevy_panorbit_camera = { version = "0.33", features = ["bevy_egui"] }
-bevy_egui = "0.38"
-egui_extras = { version = "0.33", features = ["image"] }
+# note: bevy_egui and egui_extras versions are tied to the bevy_egui version that
+# bevy_panorbit_camera's "bevy_egui" feature links against. A mismatch (e.g. app on
+# bevy_egui 0.41 while bevy_panorbit_camera 0.35 uses 0.40) silently duplicates the
+# crate in the dependency tree and breaks camera input blocking over egui areas.
+bevy_panorbit_camera = { version = "0.35", features = ["bevy_egui"] }
+bevy_egui = "0.40"
+egui_extras = { version = "0.34", features = ["image"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
 plotters = "0.3"
-rustc-hash = "2.1"
 
 # Size optimization (see: https://github.com/johnthagen/min-sized-rust)
 [profile.release]

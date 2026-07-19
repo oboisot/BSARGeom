@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
-use egui_extras;
 
 use crate::{
     scene::{
@@ -19,10 +18,36 @@ pub struct AppPlugin;
 impl Plugin for AppPlugin {
     fn build(&self, app: &mut App) {
         app
+            .init_resource::<SidePanelRects>()
             .add_plugins(EguiPlugin::default())
             .add_plugins((MenuPlugin, TxPanelPlugin, RxPanelPlugin))
             .add_systems(Startup, ui_setup)
             .add_systems(EguiPrimaryContextPass, ui_system);
+    }
+}
+
+/// Screen-space horizontal extents of the side panels in logical points
+/// (same unit and origin as [`Window::cursor_position`]).
+///
+/// Updated every frame by [`ui_system`] from the actual panel rectangles and
+/// read by the camera plugin to keep [`bevy_panorbit_camera`] from reacting to
+/// drags/scrolls performed over the panels (egui cannot report panels shown on
+/// the background layer via `Context::is_pointer_over_area`, so the camera
+/// cannot rely on egui's own focus signals for them).
+#[derive(Resource)]
+pub struct SidePanelRects {
+    /// Right edge of the left panel block (menu + Transmitter panel)
+    pub left_max_x: f32,
+    /// Left edge of the right (Receiver) panel
+    pub right_min_x: f32,
+}
+
+impl Default for SidePanelRects {
+    fn default() -> Self {
+        Self {
+            left_max_x: 0.0,
+            right_min_x: f32::INFINITY,
+        }
     }
 }
 
@@ -32,7 +57,7 @@ fn ui_setup(
     let ctx = contexts.ctx_mut()?;
 
     // Install image loaders for egui
-    egui_extras::install_image_loaders(&ctx); // This gives us image support
+    egui_extras::install_image_loaders(ctx); // This gives us image support
 
     // UI style
     let mut dark_visuals = egui::Theme::Dark.default_visuals();
@@ -71,28 +96,43 @@ fn ui_system(
     mut rx_antenna_beam_state: ResMut<RxAntennaBeamState>,
     rx_antenna_beam_footprint_state: Res<RxAntennaBeamFootprintState>,
     // BSAR infos resource
-    mut bsar_infos_state: ResMut<BsarInfosState>
+    mut bsar_infos_state: ResMut<BsarInfosState>,
+    // Panel extents for camera input blocking (see camera.rs)
+    mut side_panel_rects: ResMut<SidePanelRects>
 ) -> Result {
     let ctx = contexts.ctx_mut()?;
 
+    // Root Ui covering the whole viewport: the side panels are laid out inside it
+    // (egui 0.34 deprecates showing panels directly on the Context)
+    let mut viewport_ui = egui::Ui::new(
+        ctx.clone(),
+        "viewport".into(),
+        egui::UiBuilder::new()
+            .layer_id(egui::LayerId::background())
+            .max_rect(ctx.viewport_rect()),
+    );
+
     // Side panel global menu
-    egui::SidePanel::left("menu")
+    let menu_response = egui::Panel::left("menu")
         .resizable(false)
-        .default_width(48.0)
-        .max_width(50.0)
+        .default_size(48.0)
+        .max_size(50.0)
         .show_separator_line(true)
-        .show(ctx, |ui| {
+        .show_inside(&mut viewport_ui, |ui| {
             menu_widget.ui(ui);
+            // Register the remaining empty panel area so that egui reports the pointer
+            // as being over the panel (keeps the camera from reacting, see camera.rs)
+            ui.allocate_rect(ui.available_rect_before_wrap(), egui::Sense::hover());
         }
     );
 
         // Receiver panel
-    egui::SidePanel::right("Receiver")
+    let rx_panel_response = egui::Panel::right("Receiver")
         .resizable(false)
-        .default_width(300.0)
-        .max_width(300.0)
+        .default_size(300.0)
+        .max_size(300.0)
         .show_separator_line(true)
-        .show_animated(ctx, menu_widget.is_rx_panel_opened, |ui| {
+        .show_animated_inside(&mut viewport_ui, menu_widget.is_rx_panel_opened, |ui| {
             rx_panel_widget.ui(
                 ui,
                 &menu_widget,
@@ -101,15 +141,16 @@ fn ui_system(
                 &mut rx_antenna_beam_state,
                 &mut bsar_infos_state,
             );
+            ui.allocate_rect(ui.available_rect_before_wrap(), egui::Sense::hover());
         });
 
     // Transmitter panel
-    egui::SidePanel::left("Transmitter")
+    let tx_panel_response = egui::Panel::left("Transmitter")
         .resizable(false)
-        .default_width(300.0)
-        .max_width(300.0)
+        .default_size(300.0)
+        .max_size(300.0)
         .show_separator_line(true)
-        .show_animated(ctx, menu_widget.is_tx_panel_opened, |ui| {
+        .show_animated_inside(&mut viewport_ui, menu_widget.is_tx_panel_opened, |ui| {
             tx_panel_widget.ui(
                 ui,
                 &mut menu_widget,
@@ -121,7 +162,17 @@ fn ui_system(
                 &mut rx_antenna_state,
                 &mut rx_antenna_beam_state,
             );
+            ui.allocate_rect(ui.available_rect_before_wrap(), egui::Sense::hover());
         });
+
+    // Update the panel extents used to block the camera when the pointer is over
+    // a panel (includes the open/close animation since the actual rects are used)
+    side_panel_rects.left_max_x = menu_response.response.rect.max.x.max(
+        tx_panel_response.as_ref().map_or(0.0, |r| r.response.rect.max.x)
+    );
+    side_panel_rects.right_min_x = rx_panel_response
+        .as_ref()
+        .map_or(f32::INFINITY, |r| r.response.rect.min.x);
     // Forces Rx updates in Monostatic case when Tx panel is closed
     if menu_widget.is_monostatic &&
        !menu_widget.was_monostatic &&

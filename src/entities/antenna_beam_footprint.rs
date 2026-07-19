@@ -8,7 +8,7 @@ use bevy::{
 
 
 use crate::{
-    constants::{ENU_TO_NED_F64, TO_Y_UP_F64, BLUE_MATERIAL, GREEN_MATERIAL},
+    constants::{ENU_TO_NED_F64, MAX_BORESIGHT_RANGE_M, TO_Y_UP_F64, BLUE_MATERIAL, GREEN_MATERIAL},
     entities::{AntennaBeamState, AntennaState, CarrierState}
 };
 
@@ -102,8 +102,10 @@ pub fn update_antenna_beam_footprint_mesh_from_state(
             .length() * 0.5
     };
     // Computes the local incidence angle in degrees at a given point in the antenna beam footprint
-    let incidence = |neg_axis: &DVec3| -> f64 {        
+    // note: the dot product of two unit vectors can exceed ±1 by a few ulps, hence the clamp before acos
+    let incidence = |neg_axis: &DVec3| -> f64 {
         neg_axis.dot(DVec3::Y)
+                .clamp(-1.0, 1.0)
                 .acos()
                 .to_degrees()
     };
@@ -112,6 +114,7 @@ pub fn update_antenna_beam_footprint_mesh_from_state(
         let vel_norm = vel.length_squared();
         if vel_norm > 0.0 {
             axis.dot(vel / vel_norm.sqrt())
+                .clamp(-1.0, 1.0)
                 .asin()
                 .to_degrees()
         } else {
@@ -160,8 +163,16 @@ pub fn update_antenna_beam_footprint_mesh_from_state(
         let (mut s, mut c): (f64, f64); // (sin(theta), cos(theta))
         for (i, point) in antenna_beam_footprint_state.points.iter_mut().enumerate() {
             (s, c) = (i as f64 * STEP_THETA).sin_cos(); // Angle in radians
-            // Update resource with the new point in Antenna referential
-            point.x = d / (n.x + nyty * c + nztz * s);
+            // Update resource with the new point in Antenna referential.
+            // When the beam edge grazes or points above the horizon the denominator
+            // tends to 0 or becomes negative (intersection behind the antenna):
+            // clamp the slant distance to MAX_BORESIGHT_RANGE_M to keep the footprint finite.
+            let r = d / (n.x + nyty * c + nztz * s);
+            point.x = if r.is_finite() && r >= 0.0 {
+                r.min(MAX_BORESIGHT_RANGE_M)
+            } else {
+                MAX_BORESIGHT_RANGE_M
+            };
             point.y = ty * c * point.x;
             point.z = tz * s * point.x;
             // Transform point to World frame
@@ -285,7 +296,9 @@ pub fn update_illumination_time(
             e2x = e2.x; // X coordinate of the second point
             e2z = e2.z; // Z coordinate of the second point
             v = (vz * e1x - vx * e1z) / (vx * (e2z - e1z) - vz * (e2x - e1x));
-            if (v >= 0.0) && (v < 1.0) {
+            // note: no guard needed on the division: v = inf or NaN (segment parallel
+            // to the velocity, or 0/0) is rejected by the range check below
+            if (0.0..1.0).contains(&v) {
                 intersections[count] = DVec3::new(
                     e1x + v * (e2x - e1x),
                     0.0,
@@ -295,9 +308,12 @@ pub fn update_illumination_time(
                 if count == 2 { break; } // We only need two intersection points to compute the illumination time
             }
         }
-        antenna_beam_footprint_state.illumination_time_s = 
+        antenna_beam_footprint_state.illumination_time_s = if count == 2 {
             intersections[0].distance(intersections[1]) /
-                carrier_state.velocity_mps; // Illumination time in seconds
+                carrier_state.velocity_mps // Illumination time in seconds
+        } else {
+            0.0 // The ground-track line does not cross the footprint: no illumination
+        };
     } else {
         antenna_beam_footprint_state.illumination_time_s = 0.0; // No illumination if velocity is zero
     }
@@ -389,5 +405,147 @@ pub fn update_antenna_beam_footprint_azimuth_line_mesh_from_state(
 
         let p1 = antenna_beam_footprint_state.points[2*ANTENNA_ELV_AZI_LINES_INDEX]; // Azimuth line last point (pi)
         mesh_pos[1] = [p1.x as f32, 0.05, p1.z as f32]; // note: 0.05 in z-direction to be slightly above the ground plane
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::entities::{carrier_transform_from_state, LineStrip};
+
+    fn assert_close(value: f64, expected: f64, rel_tol: f64) {
+        assert!(
+            (value - expected).abs() <= rel_tol * expected.abs().max(1e-300),
+            "value = {value}, expected = {expected}"
+        );
+    }
+
+    fn carrier_state(height_m: f64, velocity_mps: f64) -> CarrierState {
+        CarrierState {
+            heading_deg: 0.0,
+            elevation_deg: 0.0,
+            bank_deg: 0.0,
+            height_m,
+            velocity_mps,
+            position_m: DVec3::ZERO,
+            velocity_vector_mps: DVec3::ZERO,
+        }
+    }
+
+    fn antenna_state(elevation_deg: f64) -> AntennaState {
+        AntennaState { heading_deg: 0.0, elevation_deg, bank_deg: 0.0 }
+    }
+
+    fn antenna_beam_state(beam_width_deg: f64) -> AntennaBeamState {
+        AntennaBeamState {
+            elevation_beam_width_deg: beam_width_deg,
+            azimuth_beam_width_deg: beam_width_deg,
+            one_way_gain_dbi: 20.0,
+        }
+    }
+
+    /// Builds a mesh compatible with `update_antenna_beam_footprint_mesh_from_state`.
+    fn footprint_mesh() -> Mesh {
+        LineStrip { points: vec![Vec3::ZERO; ANTENNA_BEAM_FOOTPRINT_SIZE] }.into()
+    }
+
+    #[test]
+    fn nadir_pointing_gives_circular_footprint() {
+        let (height, half_beam_width) = (3000.0, 10.0f64);
+        let mut carrier = carrier_state(height, 100.0);
+        let antenna = antenna_state(-90.0); // Boresight straight down
+        let beam = antenna_beam_state(2.0 * half_beam_width);
+        let mut footprint = AntennaBeamFootprintState::default();
+        let mut mesh = footprint_mesh();
+        carrier_transform_from_state(&mut carrier, &antenna); // Sets position/velocity vectors
+        update_antenna_beam_footprint_mesh_from_state(&carrier, &antenna, &beam, &mut footprint, &mut mesh);
+
+        let radius = height * half_beam_width.to_radians().tan();
+        let slant = (height * height + radius * radius).sqrt();
+        assert_close(footprint.range_center_m, height, 1e-12);
+        assert_close(footprint.range_min_m, slant, 1e-9);
+        assert_close(footprint.range_max_m, slant, 1e-9);
+        assert_close(footprint.ground_max_extent_m, radius, 1e-9);
+        assert_close(footprint.area_m2, std::f64::consts::PI * radius * radius, 1e-4);
+        // Exactly nadir: the acos argument is 1.0 (+/- ulps) and must not produce NaN
+        assert!(footprint.loc_incidence_center_deg.abs() < 1e-9);
+        assert!(footprint.loc_incidence_min_deg.is_finite());
+        assert!(footprint.loc_incidence_max_deg.is_finite());
+        assert!(footprint.antenna_squint_deg.abs() < 1e-9);
+    }
+
+    #[test]
+    fn horizon_grazing_beam_stays_finite() {
+        // Regression test: antenna elevation 0 deg (UI slider bound) used to send
+        // part of the footprint to +/- infinity (denominator of the cone/plane
+        // intersection crossing zero)
+        let mut carrier = carrier_state(3000.0, 100.0);
+        let antenna = antenna_state(0.0); // Boresight at the horizon
+        let beam = antenna_beam_state(20.0);
+        let mut footprint = AntennaBeamFootprintState::default();
+        let mut mesh = footprint_mesh();
+        carrier_transform_from_state(&mut carrier, &antenna);
+        assert!(carrier.position_m.is_finite()); // Clamped by MAX_BORESIGHT_RANGE_M
+
+        update_antenna_beam_footprint_mesh_from_state(&carrier, &antenna, &beam, &mut footprint, &mut mesh);
+        for point in footprint.points.iter() {
+            assert!(point.is_finite());
+        }
+        assert!(footprint.ground_max_extent_m.is_finite());
+        assert!(footprint.range_max_m.is_finite());
+        assert!(footprint.area_m2.is_finite());
+    }
+
+    /// Square footprint of half-size 100 m centred on the origin, in Y-up frame.
+    fn square_footprint() -> Vec<DVec3> {
+        vec![
+            DVec3::new(100.0, 0.0, 100.0),
+            DVec3::new(100.0, 0.0, -100.0),
+            DVec3::new(-100.0, 0.0, -100.0),
+            DVec3::new(-100.0, 0.0, 100.0),
+            DVec3::new(100.0, 0.0, 100.0),
+        ]
+    }
+
+    #[test]
+    fn illumination_time_from_ground_track_crossing() {
+        let mut carrier = carrier_state(3000.0, 100.0);
+        carrier.velocity_vector_mps = DVec3::new(100.0, 0.0, 0.0); // Z-up frame
+        let mut footprint = AntennaBeamFootprintState {
+            points: square_footprint(),
+            ..Default::default()
+        };
+        update_illumination_time(&carrier, &mut footprint);
+        // The ground track crosses the square over 200 m at 100 m/s
+        assert_close(footprint.illumination_time_s, 2.0, 1e-12);
+    }
+
+    #[test]
+    fn illumination_time_is_zero_when_track_misses_footprint() {
+        // Regression test: with fewer than 2 intersections the illumination time
+        // used to be computed from left-over zero vectors
+        let mut carrier = carrier_state(3000.0, 100.0);
+        carrier.velocity_vector_mps = DVec3::new(100.0, 0.0, 0.0);
+        // Same square, shifted away from the ground-track line
+        let mut footprint = AntennaBeamFootprintState {
+            points: square_footprint()
+                .into_iter()
+                .map(|p| p + DVec3::new(500.0, 0.0, 0.0))
+                .collect(),
+            ..Default::default()
+        };
+        update_illumination_time(&carrier, &mut footprint);
+        assert_close(footprint.illumination_time_s, 0.0, 1e-12);
+    }
+
+    #[test]
+    fn illumination_time_is_zero_for_zero_velocity() {
+        let carrier = carrier_state(3000.0, 0.0);
+        let mut footprint = AntennaBeamFootprintState {
+            points: square_footprint(),
+            ..Default::default()
+        };
+        update_illumination_time(&carrier, &mut footprint);
+        assert_close(footprint.illumination_time_s, 0.0, 1e-12);
     }
 }

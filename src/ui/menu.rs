@@ -17,6 +17,7 @@ impl Plugin for MenuPlugin {
 }
 
 #[derive(Resource)]
+#[derive(Default)]
 pub struct MenuWidget {
     pub is_tx_panel_opened: bool,
     pub is_rx_panel_opened: bool,
@@ -25,17 +26,6 @@ pub struct MenuWidget {
     pub force_rx_system_update: bool,
 }
 
-impl Default for MenuWidget {
-    fn default() -> Self {
-        Self {
-            is_tx_panel_opened: false,
-            is_rx_panel_opened: false,
-            is_monostatic: false,
-            was_monostatic: false,
-            force_rx_system_update: false,
-        }
-    }
-}
 
 impl MenuWidget {
     pub fn ui(&mut self, ui: &mut egui::Ui) {

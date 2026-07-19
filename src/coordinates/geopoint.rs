@@ -126,7 +126,9 @@ impl GeographicPoint {
     #[inline]
     pub fn dms_to_dd(d: f64, m: f64, s: f64) -> f64 {
         const FRAC_1_60: f64 = 1.0 / 60.0;
-        if d < 0.0 {
+        // note: is_sign_negative() (not `< 0.0`) so that angles in (-1°, 0°),
+        // whose degrees part is -0.0, keep their sign
+        if d.is_sign_negative() {
             -(-d + (m + s * FRAC_1_60) * FRAC_1_60)
         } else {
             d + (m + s * FRAC_1_60) * FRAC_1_60
@@ -141,3 +143,56 @@ impl GeographicPoint {
 /// [^note]: ECEF: **E**arth-**C**entered, **E**arth-**F**ixed.
 /// See [Earth-centered, Earth-fixed coordinate system](https://en.wikipedia.org/wiki/Earth-centered,_Earth-fixed_coordinate_system) for more details.
 pub type CartesianECEFPoint = DVec3;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dd_to_dms_reference_values() {
+        assert_eq!(GeographicPoint::dd_to_dms(43.5), (43.0, 30.0, 0.0));
+        assert_eq!(GeographicPoint::dd_to_dms(-7.5), (-7.0, 30.0, 0.0));
+        let (d, m, s) = GeographicPoint::dd_to_dms(12.505);
+        assert_eq!((d, m), (12.0, 30.0));
+        assert!((s - 18.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn dms_to_dd_reference_values() {
+        assert_eq!(GeographicPoint::dms_to_dd(43.0, 30.0, 0.0), 43.5);
+        assert_eq!(GeographicPoint::dms_to_dd(-7.0, 30.0, 0.0), -7.5);
+        assert_eq!(GeographicPoint::dms_to_dd(0.0, 15.0, 0.0), 0.25);
+    }
+
+    #[test]
+    fn dms_roundtrip_keeps_sign_between_minus_one_and_zero_degrees() {
+        // Regression test: the degrees part of -0.25° is -0.0 and its sign used
+        // to be dropped by `d < 0.0` in dms_to_dd
+        let (d, m, s) = GeographicPoint::dd_to_dms(-0.25);
+        assert!(d == 0.0 && d.is_sign_negative()); // -0.0
+        assert_eq!((m, s), (15.0, 0.0));
+        assert_eq!(GeographicPoint::dms_to_dd(d, m, s), -0.25);
+    }
+
+    #[test]
+    fn dms_roundtrip_random_values() {
+        for &dd in [12.3456789, -45.987654, 0.001, -0.999, 179.999999].iter() {
+            let (d, m, s) = GeographicPoint::dd_to_dms(dd);
+            assert!(
+                (GeographicPoint::dms_to_dd(d, m, s) - dd).abs() < 1e-9,
+                "roundtrip failed for {dd}"
+            );
+        }
+    }
+
+    #[test]
+    fn geographic_point_accessors() {
+        let gp = GeographicPoint::from_degrees(5.93, 43.12, 100.0);
+        assert!((gp.lon_deg() - 5.93).abs() < 1e-12);
+        assert!((gp.lat_deg() - 43.12).abs() < 1e-12);
+        let (lon_rad, lat_rad, height_m) = gp.coordinates();
+        assert!((lon_rad - 5.93f64.to_radians()).abs() < 1e-15);
+        assert!((lat_rad - 43.12f64.to_radians()).abs() < 1e-15);
+        assert_eq!(height_m, 100.0);
+    }
+}
