@@ -27,9 +27,13 @@ pub struct TxPanelPlugin;
 
 impl Plugin for TxPanelPlugin {
     fn build(&self, app: &mut App) {
+        // update_tx must run after update_rx: in monostatic mode the mirrored
+        // Rx state only recomputes its derived fields (position, velocity
+        // vector, footprint) inside update_rx, and update_tx reads them when
+        // refreshing the BSAR infos and the iso-range/Doppler plane.
         app
             .init_resource::<TxPanelWidget>()
-            .add_systems(Update, update_tx);
+            .add_systems(Update, update_tx.after(super::rx_panel::update_rx));
     }
 }
 
@@ -90,6 +94,10 @@ impl TxPanelWidget {
             } else {
                 rx_panel_widget.transform_needs_update = true;
                 rx_panel_widget.velocity_vector_needs_update = true;
+                // Make update_rx refresh the BSAR infos for the new (mirrored)
+                // geometry: no Tx flag is set by the toggle itself, so
+                // update_tx alone would leave them stale.
+                rx_panel_widget.system_needs_update = true;
                 menu_widget.force_rx_system_update = true;
                 menu_widget.was_monostatic = true;
             }
@@ -102,7 +110,6 @@ impl TxPanelWidget {
 // see: https://github.com/bevyengine/bevy/issues/4864
 fn update_tx(
     res: ( // Resources
-        Res<TxPanelWidget>,               // tx_panel_widget
         Res<TxAntennaState>,              // tx_antenna_state
         Res<TxAntennaBeamState>,          // tx_antenna_beam_state
         Res<RxCarrierState>,              // rx_carrier_state
@@ -110,6 +117,7 @@ fn update_tx(
         Res<RxAntennaBeamFootprintState>, // rx_antenna_beam_footprint_state
     ),
     resmut: ( // Mutable resources
+        ResMut<TxPanelWidget>,               // tx_panel_widget
         ResMut<Assets<StandardMaterial>>,    // materials
         ResMut<Assets<Mesh>>,                // meshes
         ResMut<Assets<Image>>,               // images
@@ -133,7 +141,6 @@ fn update_tx(
 ) {
     // Extracts resources
     let (
-        tx_panel_widget,
         tx_antenna_state,
         tx_antenna_beam_state,
         rx_carrier_state,
@@ -142,6 +149,7 @@ fn update_tx(
     ) = res;
     // Extracts mutable resources
     let (
+        mut tx_panel_widget,
         mut materials,
         mut meshes,
         mut images,
@@ -263,6 +271,12 @@ fn update_tx(
             &iso_range_doppler_material_q,
         );
     }
+    // The panel flags are one-shot commands consumed by this system: clear
+    // them here so they cannot linger when the Tx panel (which resets its own
+    // flags only while it is open) is closed.
+    tx_panel_widget.transform_needs_update = false;
+    tx_panel_widget.velocity_vector_needs_update = false;
+    tx_panel_widget.system_needs_update = false;
 }
 
 

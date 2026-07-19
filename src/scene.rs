@@ -231,7 +231,7 @@ pub struct BsarInfosState {
 }
 
 
-fn spawn_scene(
+pub(crate) fn spawn_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,

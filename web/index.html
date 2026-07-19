@@ -56,6 +56,61 @@
           transform: rotate(360deg);
         }
       }
+
+      /* Styles for the loading label and progress bar */
+      .loading-label {
+        margin-top: 1.5rem;
+        font-size: 1.1rem;
+      }
+
+      .progress-track {
+        width: 280px;
+        height: 8px;
+        margin-top: 0.75rem;
+        background-color: #1d1e20;
+        border-radius: 4px;
+        overflow: hidden;
+      }
+
+      #progress-bar {
+        width: 0%;
+        height: 100%;
+        background-color: #ececec;
+        transition: width 0.15s ease-out;
+      }
+
+      #progress-text {
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+        color: #b2b2b2;
+      }
+
+      /* Styles for the WebGPU error screen */
+      #webgpu-error {
+        max-width: 44rem;
+        padding: 0 1rem;
+        line-height: 1.6;
+        text-align: center;
+      }
+
+      #webgpu-error .title {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-bottom: 1rem;
+      }
+
+      #webgpu-error ul {
+        list-style: disc inside;
+        margin-top: 0.5rem;
+        text-align: left;
+      }
+
+      #webgpu-error code {
+        background-color: #1d1e20;
+        padding: 0.1rem 0.3rem;
+        border-radius: 0.25rem;
+        font-size: 0.9em;
+      }
     </style>
   <title>BSARGeom</title></head>
 
@@ -63,27 +118,104 @@
     <noscript>JavaScript support is required to run this app</noscript>
     <div id="loading-screen" class="center">
       <span class="spinner"></span>
+      <p id="loading-label" class="loading-label">Loading BSARGeom…</p>
+      <div class="progress-track"><div id="progress-bar"></div></div>
+      <p id="progress-text"></p>
+    </div>
+    <div id="webgpu-error" class="center" style="display: none">
+      <p class="title">WebGPU is not available in this browser</p>
+      <p>
+        BSARGeom renders through <a href="https://webgpu.org/" target="_blank" rel="noopener noreferrer">WebGPU</a>: without it, this page won't work.<br />
+        Known working browsers:
+      </p>
+      <ul>
+        <li>Chrome / Edge 113 or newer (on Linux, may need <code>chrome://flags/#enable-unsafe-webgpu</code>)</li>
+        <li>Firefox 141 or newer on Windows (macOS/Linux: latest versions, or <code>dom.webgpu.enabled</code> in <code>about:config</code>)</li>
+        <li>Safari 26 or newer</li>
+      </ul>
     </div>
 
     <script type="module">
       // Prevent right-click context menu
-      window.addEventListener(`contextmenu`, (e) => e.preventDefault());      
-      // Starting the game
+      window.addEventListener(`contextmenu`, (e) => e.preventDefault());
 
-      // When this file is used as the default `index.html`, the CLI will automatically replace
-      // `bevy_app.js` with the name of the generated JS entrypoint. If you copy this file and
-      // customize it, you will need to manually change the name. For more information, please see
-      // <https://thebevyflock.github.io/bevy_cli/cli/web/default-index-html.html>!
-      import init from "./build/bsargeom.js";
-      init().catch((error) => {
-        if (
-          !error.message.startsWith(
-            "Using exceptions for control flow, don't mind me. This isn't actually an error!"
-          )
-        ) {
-          throw error;
+      // BSARGeom is compiled with the WebGPU backend only: check that an
+      // adapter is actually obtainable before fetching the app, and explain
+      // why the page cannot work when it is not.
+      const adapter = "gpu" in navigator
+        ? await navigator.gpu.requestAdapter().catch(() => null)
+        : null;
+      if (adapter === null) {
+        document.getElementById("loading-screen").style.display = "none";
+        document.getElementById("webgpu-error").style.display = "flex";
+      } else {
+        // Starting the game
+
+        // The CLI will automatically replace this template
+        // with the name of the generated JS entrypoint. For more information, please see
+        // <https://thebevyflock.github.io/bevy_cli/cli/web/default-index-html.html>!
+        const { default: init } = await import("{% entrypoint %}.js");
+
+        // Fetch the Wasm binary through a byte-counting stream so the
+        // download progress can be reported, then hand the counted Response
+        // to init() (streaming compilation is preserved). Falls back to
+        // init()'s own plain fetch if anything goes wrong here.
+        const loading_label = document.getElementById("loading-label");
+        const progress_bar = document.getElementById("progress-bar");
+        const progress_text = document.getElementById("progress-text");
+        const as_mb = (bytes) => (bytes / (1024 * 1024)).toFixed(1);
+        const update_progress = (loaded, total) => {
+          if (total > 0) {
+            // Note: with a compressed transfer, `total` (Content-Length) counts
+            // encoded bytes while `loaded` counts decoded ones — clamp to 100%.
+            progress_bar.style.width = `${Math.min(100, (100 * loaded) / total)}%`;
+            progress_text.textContent = `${as_mb(Math.min(loaded, total))} / ${as_mb(total)} MB`;
+          } else {
+            progress_text.textContent = `${as_mb(loaded)} MB`;
+          }
+        };
+
+        let wasm_source;
+        try {
+          const response = await fetch("{% entrypoint %}_bg.wasm");
+          if (!response.ok || response.body === null) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+          const total = Number(response.headers.get("Content-Length")) || 0;
+          let loaded = 0;
+          wasm_source = new Response(
+            new ReadableStream({
+              async start(controller) {
+                const reader = response.body.getReader();
+                for (;;) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+                  loaded += value.length;
+                  update_progress(loaded, total);
+                  controller.enqueue(value);
+                }
+                progress_bar.style.width = "100%";
+                loading_label.textContent = "Starting BSARGeom…";
+                controller.close();
+              },
+            }),
+            { status: response.status, headers: response.headers }
+          );
+        } catch {
+          wasm_source = undefined; // let init() fetch the Wasm itself
+          loading_label.textContent = "Starting BSARGeom…";
         }
-      });
+
+        init(wasm_source && { module_or_path: wasm_source }).catch((error) => {
+          if (
+            !error.message.startsWith(
+              "Using exceptions for control flow, don't mind me. This isn't actually an error!"
+            )
+          ) {
+            throw error;
+          }
+        });
+      }
     </script>
 
     <script type="module">

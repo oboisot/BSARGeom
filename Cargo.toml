@@ -1,6 +1,6 @@
 [package]
 name = "bsargeom"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 
 [dependencies.bevy]
@@ -22,7 +22,6 @@ features = [
     # "webgl2",
     "webgpu",
     "x11",
-    # "zstd_rust"
 ]
 
 [dependencies]

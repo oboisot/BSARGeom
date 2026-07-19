@@ -90,9 +90,8 @@ impl RxPanelWidget {
 }
 
 // see: https://github.com/bevyengine/bevy/issues/4864
-fn update_rx(
+pub(super) fn update_rx(
     res: ( // Resources
-        Res<RxPanelWidget>,               // rx_panel_widget
         Res<RxAntennaState>,              // rx_antenna_state
         Res<RxAntennaBeamState>,          // rx_antenna_beam_state
         Res<TxCarrierState>,              // tx_carrier_state
@@ -100,6 +99,7 @@ fn update_rx(
         Res<TxAntennaBeamFootprintState>, // tx_antenna_beam_footprint_state
     ),
     resmut: ( // Mutable resources
+        ResMut<RxPanelWidget>,               // rx_panel_widget
         ResMut<Assets<StandardMaterial>>,    // materials
         ResMut<Assets<Mesh>>,                // meshes
         ResMut<Assets<Image>>,               // images
@@ -124,7 +124,6 @@ fn update_rx(
 ) {
     // Extracts resources
     let (
-        rx_panel_widget,
         rx_antenna_state,
         rx_antenna_beam_state,
         tx_carrier_state,
@@ -133,6 +132,7 @@ fn update_rx(
     ) = res;
     // Extracts mutable resources
     let (
+        mut rx_panel_widget,
         mut materials,
         mut meshes,
         mut images,
@@ -281,6 +281,12 @@ fn update_rx(
             &iso_range_doppler_material_q,
         );
     }
+    // The panel flags are one-shot commands consumed by this system: clear
+    // them here so they cannot linger when the Rx panel (which resets its own
+    // flags only while it is open) is closed.
+    rx_panel_widget.transform_needs_update = false;
+    rx_panel_widget.velocity_vector_needs_update = false;
+    rx_panel_widget.system_needs_update = false;
 }
 
 
