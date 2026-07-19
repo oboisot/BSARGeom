@@ -1,0 +1,80 @@
+# see: https://github.com/taiki-e/create-gh-release-action
+#      https://github.com/taiki-e/upload-rust-binary-action
+
+name: BSARGeom Release
+
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - '[0-9]+.*'
+
+jobs:
+  # Create the release once, with its notes extracted from the matching
+  # CHANGELOG.md section, before the per-target upload jobs run — two jobs
+  # racing to create the same release can drop the generated notes.
+  create-release:
+    name: Create release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Create GitHub release from CHANGELOG
+        uses: taiki-e/create-gh-release-action@v1
+        with:
+          changelog: CHANGELOG.md
+          title: BSARGeom $version
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  dist:
+    name: dist (${{ matrix.target }})
+    needs: create-release
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            # Build against glibc 2.28 for wide distribution compatibility
+            # (see: https://github.com/pypa/manylinux)
+            container: quay.io/pypa/manylinux_2_28_x86_64
+          - os: macos-latest
+            # Universal binary: x86_64 (Intel) + aarch64 (Apple Silicon)
+            target: universal-apple-darwin
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install system dependencies (Linux container)
+        if: ${{ matrix.container }}
+        # fontconfig headers are required to build plotters' font support
+        run: yum install -y fontconfig-devel
+
+      - name: Install rustup (Linux container)
+        if: ${{ matrix.container }}
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Install Rust toolchain
+        run: |
+          rustup update --no-self-update stable
+          rustup default stable
+
+      - name: Add macOS universal targets
+        if: ${{ matrix.target == 'universal-apple-darwin' }}
+        run: rustup target add x86_64-apple-darwin aarch64-apple-darwin
+
+      - name: Build and upload binary
+        uses: taiki-e/upload-rust-binary-action@v1
+        with:
+          bin: bsargeom
+          target: ${{ matrix.target }}
+          token: ${{ secrets.GITHUB_TOKEN }}
