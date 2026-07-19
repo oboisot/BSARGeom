@@ -13,6 +13,7 @@ pub mod contour;
 pub mod coordinates;
 pub mod entities;
 pub mod scene;
+pub mod textdraw;
 pub mod ui;
 pub mod world;
 

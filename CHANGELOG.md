@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Camera focus toggle in the menu (Ground / Tx / Rx) that follows the selected
+  carrier as its parameters move it, plus a "reset view" button restoring the
+  initial orientation and zoom. Focus defaults to "free" (unconstrained orbit /
+  pan / zoom); clicking the active focus button releases the camera back to it.
+- Per-section "reset to defaults" buttons on the Transmitter and Receiver
+  panels (Carrier, Antenna orientation, Beamwidth, System).
+- Value labels on the ground iso-Range / iso-Doppler texture, with the unit
+  chosen per family for readability (m/km, Hz/kHz) and decluttering.
+- Normalized Generalized Ambiguity Function (GAF) plot, opened from a menu
+  button, showing the point-target response with its −3/−10/−20 dB resolution
+  contours (cross-validated bit-exact against the BSARConf reference), framed
+  by `egui_plot` with metric Easting/Northing axes, grid, zoom and pan. The
+  iso-dB contours are drawn as vector plot lines over the intensity heatmap, so
+  they stay crisp at any zoom and can be toggled from the plot legend. The
+  window is freely draggable.
+
+### Fixed
+
+- Contour value labels were placed on the vertically mirrored contour: the
+  chart's reversed y-range already puts grid row 0 at the top, so the label
+  rasterizer must not flip it again. Iso-Doppler labels consequently showed the
+  sign of the opposite contour (positive values on dashed lines and vice versa).
+
+### Changed
+
+- Contour/label text is now rasterized from an embedded DejaVu Sans font via
+  `ab_glyph`, replacing the `plotters` default font backend (which cannot draw
+  text on the web/wasm target); the native fontconfig build dependency is gone.
+
 ## [1.0.0] - 2026-07-19
 
 First stable release.

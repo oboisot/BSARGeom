@@ -64,6 +64,10 @@ pub struct BsarInfos {
     pub prf_max_hz: f64,
     /// The Noise-Equivalent Sigma Zero (linear scale).
     pub nesz: f64,
+    /// Ground-projected bistatic bisector vector and its time derivative
+    /// (`z = 0`), reused to plot the Generalized Ambiguity Function.
+    pub betag: DVec3,
+    pub dbetag: DVec3,
 }
 
 impl Default for BsarInfos {
@@ -86,6 +90,8 @@ impl Default for BsarInfos {
             prf_min_hz: f64::NAN,
             prf_max_hz: f64::NAN,
             nesz: f64::NAN,
+            betag: DVec3::splat(f64::NAN),
+            dbetag: DVec3::splat(f64::NAN),
         }
     }
 }
@@ -165,6 +171,8 @@ impl BsarInfos {
                                 (vrx - vrx.dot(urxp) * urxp) / rxp_norm);
                 let betag = DVec3::new(beta.x, beta.y, 0.0); // Projected bisector vector to ground plane
                 let dbetag = DVec3::new(dbeta.x, dbeta.y, 0.0); // Projected bisector vector to ground plane
+                self.betag = betag;
+                self.dbetag = dbetag;
                 let beta_norm = beta.length();
                 let dbeta_norm = dbeta.length();
                 let betag_norm = betag.length();
@@ -347,6 +355,18 @@ pub fn doppler_frequency_sg(
     }
 }
 
+/// Normalized cardinal sine `sin(πx)/(πx)`, with `sinc(0) = 1`.
+/// Matches BSARConf's `sinc` (used to plot the Generalized Ambiguity Function).
+#[inline]
+pub fn sinc(x: f64) -> f64 {
+    let arg = std::f64::consts::PI * x;
+    if x.abs() < 1e-6 { // Series expansion near 0 for double precision
+        1.0 - arg * arg / 6.0
+    } else {
+        arg.sin() / arg
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -357,6 +377,22 @@ mod tests {
             (value - expected).abs() <= rel_tol * expected.abs().max(1e-300),
             "value = {value}, expected = {expected}"
         );
+    }
+
+    #[test]
+    fn sinc_matches_reference_values() {
+        // sinc(0) = 1 (via the near-zero series branch)
+        assert_close(sinc(0.0), 1.0, 1e-15);
+        assert!((sinc(1e-9) - 1.0).abs() < 1e-15);
+        // Integer arguments are exact zeros of the normalized cardinal sine
+        for n in 1..=5 {
+            assert!(sinc(n as f64).abs() < 1e-12, "sinc({n}) should be ~0");
+        }
+        // Even symmetry
+        assert_close(sinc(0.37), sinc(-0.37), 1e-15);
+        // Half-power width: sinc²(x) = 1/2 at x = ±SINC_WIDTH_AT_HALF_POWER/2
+        let half = SINC_WIDTH_AT_HALF_POWER / 2.0;
+        assert_close(sinc(half) * sinc(half), 0.5, 1e-12);
     }
 
     /// Runs `update()` for a monostatic broadside geometry:
@@ -518,3 +554,4 @@ mod tests {
         assert!(infos.nesz.is_nan());
     }
 }
+

@@ -17,13 +17,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Install system dependencies
-        # fontconfig headers are required to build plotters' font support
-        # (yeslogic-fontconfig-sys, pulled by the default `plotters` features)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libfontconfig1-dev
-
       - name: Install Rust toolchain
         run: rustup update --no-self-update stable
 

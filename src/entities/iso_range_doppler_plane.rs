@@ -19,6 +19,7 @@ use crate::{
     constants::HALF_PLANE_LENGTH,
     entities::AntennaBeamFootprintState,
     scene::{IsoRangeDopplerPlane, TxCarrierState, RxCarrierState},
+    textdraw::{draw_text_bgrx, text_width},
 };
 
 const MAX_PLANE_LENGTH: f64 = 2.0 * HALF_PLANE_LENGTH as f64;
@@ -42,6 +43,37 @@ const ISO_DOPPLER_STYLE: ShapeStyle = ShapeStyle {
     filled: false,
     stroke_width: 6,
 };
+// Contour value labels: ~45 px on the 2048² texture matches the ~12 px labels
+// of BSARConf's ~500 px plotly plot; tiny chunks are left unlabeled.
+const LABEL_FONT_SIZE: f32 = 45.0;
+const LABEL_MIN_CHUNK_POINTS: usize = 8;
+// Minimum spacing between two labels of the same family, in texture pixels.
+const LABEL_MIN_SPACING_PX: f32 = 220.0;
+// Label colors as (R, G, B), matching the ISO_RANGE_RED/ISO_DOPPLER_BLUE lines.
+const ISO_RANGE_LABEL_RGB: (u8, u8, u8) = (214, 39, 40);
+const ISO_DOPPLER_LABEL_RGB: (u8, u8, u8) = (31, 119, 180);
+
+/// A pending contour label: value text at a grid-coordinate anchor, drawn into
+/// the pixel buffer after the plotters drawing area is released.
+struct Label {
+    text: String,
+    anchor: (f64, f64), // grid coordinates (0..GRID_SIZE-1)
+    color: (u8, u8, u8),
+}
+
+/// Contour label formatter with the unit chosen once per contour family (from
+/// its largest absolute level), so all labels of a family share the same unit.
+fn label_formatter(levels: &[f64], base_unit: &'static str, kilo_unit: &'static str) -> impl Fn(f64) -> String {
+    let max_abs = levels.iter().fold(0.0f64, |max, level| max.max(level.abs()));
+    let kilo = max_abs >= 10_000.0;
+    move |level: f64| {
+        if kilo {
+            format!("{:.1} {}", level / 1000.0, kilo_unit)
+        } else {
+            format!("{:.0} {}", level, base_unit)
+        }
+    }
+}
 
 pub fn spawn_iso_range_doppler_plane(
     commands: &mut Commands,
@@ -204,40 +236,108 @@ impl IsoRangeDopplerPlaneState {
         // Compute the levels for iso-range and iso-doppler
         let iso_range_levels = self.iso_range.levels(NLEVELS);
         let iso_doppler_levels = self.iso_doppler.levels(NLEVELS);
+        // Value labels: adaptive unit per family, one label per level
+        let format_range = label_formatter(&iso_range_levels, "m", "km");
+        let format_doppler = label_formatter(&iso_doppler_levels, "Hz", "kHz");
         //
         if let Some(ref mut bytes) = image.data {
-            let root = BitMapBackend::<BGRXPixel>::with_buffer_and_format(
-                bytes,
-                (TEXTURE_WIDTH as u32, TEXTURE_HEIGHT as u32)
-            )?.into_drawing_area();
-            root.fill(&GROUND_GREY)?;
+            let mut labels: Vec<Label> = Vec::new();
+            // Draw the contour lines with plotters; the drawing area borrows
+            // `bytes`, so it is scoped and dropped before the labels (which
+            // re-borrow `bytes`) are rasterized.
+            {
+                let root = BitMapBackend::<BGRXPixel>::with_buffer_and_format(
+                    bytes,
+                    (TEXTURE_WIDTH as u32, TEXTURE_HEIGHT as u32)
+                )?.into_drawing_area();
+                root.fill(&GROUND_GREY)?;
 
-            let mut chart = ChartBuilder::on(&root)
-                .build_cartesian_2d(
-                    0.0..(GRID_SIZE-1) as f64,
-                    (GRID_SIZE-1) as f64..0.0 // Invert Y
-                )?;
-            // Iso-range
-            for level in iso_range_levels {
-                for line in march(&self.iso_range, level) { // Compute contours
-                    chart.draw_series(
-                        LineSeries::new(line, ISO_RANGE_STYLE) // here Contours are the same type as Coord for plotters
+                let mut chart = ChartBuilder::on(&root)
+                    .build_cartesian_2d(
+                        0.0..(GRID_SIZE-1) as f64,
+                        (GRID_SIZE-1) as f64..0.0 // Invert Y
                     )?;
-                }
-            }
-            // Iso-doppler
-            for level in iso_doppler_levels {
-                for line in march(&self.iso_doppler, level) { // Compute contours
-                    if level >= 0.0 {
+                // Iso-range
+                for &level in &iso_range_levels {
+                    let mut longest_chunk: Vec<(f64, f64)> = Vec::new();
+                    for line in march(&self.iso_range, level) { // Compute contours
+                        if line.len() > longest_chunk.len() {
+                            longest_chunk = line.clone();
+                        }
                         chart.draw_series(
-                            LineSeries::new(line, ISO_DOPPLER_STYLE)
-                        )?;
-                    } else {
-                        chart.draw_series(
-                            DashedLineSeries::new(line, 6, 10, ISO_DOPPLER_STYLE)
+                            LineSeries::new(line, ISO_RANGE_STYLE) // here Contours are the same type as Coord for plotters
                         )?;
                     }
+                    // One value label per level, on its longest contour chunk
+                    if longest_chunk.len() >= LABEL_MIN_CHUNK_POINTS {
+                        labels.push(Label {
+                            text: format_range(level),
+                            anchor: longest_chunk[longest_chunk.len() / 2],
+                            color: ISO_RANGE_LABEL_RGB,
+                        });
+                    }
                 }
+                // Iso-doppler
+                for &level in &iso_doppler_levels {
+                    let mut longest_chunk: Vec<(f64, f64)> = Vec::new();
+                    for line in march(&self.iso_doppler, level) { // Compute contours
+                        if line.len() > longest_chunk.len() {
+                            longest_chunk = line.clone();
+                        }
+                        if level >= 0.0 {
+                            chart.draw_series(
+                                LineSeries::new(line, ISO_DOPPLER_STYLE)
+                            )?;
+                        } else {
+                            chart.draw_series(
+                                DashedLineSeries::new(line, 6, 10, ISO_DOPPLER_STYLE)
+                            )?;
+                        }
+                    }
+                    // One value label per level, on its longest contour chunk
+                    if longest_chunk.len() >= LABEL_MIN_CHUNK_POINTS {
+                        labels.push(Label {
+                            text: format_doppler(level),
+                            anchor: longest_chunk[longest_chunk.len() / 2],
+                            color: ISO_DOPPLER_LABEL_RGB,
+                        });
+                    }
+                }
+            }
+            // Rasterize the labels directly into the pixel buffer, centered on
+            // their anchor. Grid coords map linearly to the whole texture: the
+            // chart uses the full drawing area and its reversed y-range
+            // (`(GRID_SIZE-1)..0.0`) puts grid row 0 at the top of the image,
+            // so the row index maps directly to the pixel row (no flip — an
+            // inverted mapping here silently moves every label onto the
+            // vertically mirrored contour, i.e. the opposite Doppler sign).
+            // To keep the map readable (50 levels/family), a label is skipped
+            // when it lands too close to one already placed in the same family
+            // (decluttering, like plotly's `showlabels`).
+            let sx = (TEXTURE_WIDTH - 1) as f64 / (GRID_SIZE - 1) as f64;
+            let sy = (TEXTURE_HEIGHT - 1) as f64 / (GRID_SIZE - 1) as f64;
+            let mut placed: Vec<(f32, f32, (u8, u8, u8))> = Vec::new();
+            for label in &labels {
+                let px = (label.anchor.0 * sx) as f32;
+                let py = (label.anchor.1 * sy) as f32;
+                let too_close = placed.iter().any(|&(ox, oy, color)| {
+                    color == label.color
+                        && (px - ox).hypot(py - oy) < LABEL_MIN_SPACING_PX
+                });
+                if too_close {
+                    continue;
+                }
+                placed.push((px, py, label.color));
+                let half_width = 0.5 * text_width(&label.text, LABEL_FONT_SIZE);
+                draw_text_bgrx(
+                    bytes,
+                    TEXTURE_WIDTH,
+                    TEXTURE_HEIGHT,
+                    (px - half_width, py - 0.5 * LABEL_FONT_SIZE),
+                    LABEL_FONT_SIZE,
+                    label.color,
+                    &label.text,
+                );
             }
         }
 
@@ -428,4 +528,100 @@ impl Field for IsoDoppler {
     fn z_at(&self, x: usize, y: usize) -> f64 {
         self.data[y * self.width + x] // y -> i, x -> j
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// End-to-end texture draw including the contour value labels: a font or
+    /// plotters-feature regression makes this return Err — which the in-app
+    /// caller silently ignores, so this test is the loud failure path.
+    #[test]
+    fn update_texture_draws_contours_and_labels() {
+        let mut state = IsoRangeDopplerPlaneState::default();
+        let mut image = Image::new_fill(
+            Extent3d {
+                width: TEXTURE_WIDTH as u32,
+                height: TEXTURE_HEIGHT as u32,
+                depth_or_array_layers: 1,
+            },
+            TextureDimension::D2,
+            &[0, 0, 0, 0],
+            TextureFormat::Bgra8UnormSrgb,
+            RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
+        );
+        state
+            .update_texture(
+                &DVec3::new(0.0, -8000.0, 6000.0),
+                &DVec3::new(150.0, 0.0, 0.0),
+                &DVec3::new(3000.0, 0.0, 4000.0),
+                &DVec3::new(0.0, 100.0, 0.0),
+                0.03,
+                20_000.0,
+                &mut image,
+            )
+            .expect("texture drawing including labels must succeed");
+        // The texture must contain drawn content, not just the grey ground fill
+        let bytes = image.data.as_ref().unwrap();
+        assert!(bytes
+            .chunks(4)
+            .any(|px| px[0] != 128 || px[1] != 128 || px[2] != 128));
+    }
+
+
+
+    /// Regression test for the label placement mapping.
+    ///
+    /// Draws a horizontal contour at a known grid row through the very same
+    /// plotters chart configuration used by `update_texture`, then checks the
+    /// row of pixels plotters actually inked against the mapping the label
+    /// rasterizer uses. The chart's reversed y-range puts grid row 0 at the top,
+    /// so pixel_row = grid_row * sy; the previously used flipped mapping placed
+    /// every label on the vertically mirrored contour (opposite Doppler sign).
+    #[test]
+    fn label_pixel_mapping_matches_plotters_contour_rows() {
+        const GRID_ROW: f64 = 25.0; // Well inside the top quarter of the grid
+        let mut bytes = vec![128u8; TEXTURE_WIDTH * TEXTURE_HEIGHT * 4]; // grey fill
+        {
+            let root = BitMapBackend::<BGRXPixel>::with_buffer_and_format(
+                &mut bytes,
+                (TEXTURE_WIDTH as u32, TEXTURE_HEIGHT as u32),
+            )
+            .unwrap()
+            .into_drawing_area();
+            let mut chart = ChartBuilder::on(&root)
+                .build_cartesian_2d(
+                    0.0..(GRID_SIZE - 1) as f64,
+                    (GRID_SIZE - 1) as f64..0.0, // Invert Y, as in update_texture
+                )
+                .unwrap();
+            chart
+                .draw_series(LineSeries::new(
+                    (0..GRID_SIZE).map(|col| (col as f64, GRID_ROW)),
+                    ISO_DOPPLER_STYLE,
+                ))
+                .unwrap();
+        }
+        // Row of the inked (non-grey) pixels plotters produced
+        let inked_row = (0..TEXTURE_HEIGHT)
+            .find(|&row| {
+                (0..TEXTURE_WIDTH).any(|col| {
+                    let i = (row * TEXTURE_WIDTH + col) * 4;
+                    bytes[i] != 128 || bytes[i + 1] != 128 || bytes[i + 2] != 128
+                })
+            })
+            .expect("the contour must be drawn somewhere");
+        // The mapping used to place labels must agree with it
+        let sy = (TEXTURE_HEIGHT - 1) as f64 / (GRID_SIZE - 1) as f64;
+        let label_row = (GRID_ROW * sy) as usize;
+        let tolerance = (2.0 * sy) as usize + ISO_DOPPLER_STYLE.stroke_width as usize;
+        assert!(
+            label_row.abs_diff(inked_row) <= tolerance,
+            "label row {label_row} does not match the drawn contour row {inked_row}"
+        );
+    }
+
+
+
 }

@@ -8,7 +8,7 @@ use crate::{
         BsarInfosState
     },
     ui::{
-        bsar_infos_ui, carrier_infos_ui,
+        bsar_infos_ui, carrier_infos_ui, show_gaf_window, GafState,
         MenuPlugin, MenuWidget, TxPanelPlugin, TxPanelWidget, RxPanelPlugin, RxPanelWidget
     }
 };
@@ -19,6 +19,7 @@ impl Plugin for AppPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<SidePanelRects>()
+            .init_resource::<GafState>()
             .add_plugins(EguiPlugin::default())
             .add_plugins((MenuPlugin, TxPanelPlugin, RxPanelPlugin))
             .add_systems(Startup, ui_setup)
@@ -97,6 +98,8 @@ fn ui_system(
     rx_antenna_beam_footprint_state: Res<RxAntennaBeamFootprintState>,
     // BSAR infos resource
     mut bsar_infos_state: ResMut<BsarInfosState>,
+    // GAF plot texture cache
+    mut gaf_state: ResMut<GafState>,
     // Panel extents for camera input blocking (see camera.rs)
     mut side_panel_rects: ResMut<SidePanelRects>
 ) -> Result {
@@ -255,6 +258,16 @@ fn ui_system(
             &bsar_infos_state.inner
         );
     });
-    
+
+    // Generalized Ambiguity Function plot window
+    show_gaf_window(
+        ctx,
+        &mut menu_widget.is_gaf_opened,
+        &mut gaf_state,
+        &bsar_infos_state.inner,
+        tx_carrier_state.bandwidth_mhz * 1e6, // MHz -> Hz
+        tx_carrier_state.center_frequency_ghz * 1e9, // GHz -> Hz
+    );
+
     Ok(())
 }
