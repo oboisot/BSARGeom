@@ -3,6 +3,7 @@ use bevy_egui::egui;
 use crate::{
     constants::{MAX_HEIGHT_M, MAX_VELOCITY_MPS},
     entities::{AntennaBeamState, AntennaState, CarrierState},
+    ui::menu::RESET_ICON,
 };
 
 /// Section heading row: centered title with a small right-aligned "↺" reset
@@ -16,7 +17,7 @@ pub fn heading_with_reset(ui: &mut egui::Ui, title: egui::RichText, hover: &str)
         egui::pos2(row.rect.right() - 12.0, row.rect.center().y),
         egui::vec2(18.0, row.rect.height()),
     );
-    ui.put(button_rect, egui::Button::new(egui::RichText::new("↺").size(12.0)).small())
+    ui.put(button_rect, egui::Button::image(RESET_ICON).frame_when_inactive(false))
         .on_hover_text(hover_text)
         .clicked()
 }

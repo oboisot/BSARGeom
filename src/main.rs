@@ -12,6 +12,7 @@ pub mod constants;
 pub mod contour;
 pub mod coordinates;
 pub mod entities;
+pub mod raster;
 pub mod scene;
 pub mod textdraw;
 pub mod ui;

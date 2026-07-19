@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use bevy_egui::egui;
 
+const TEXT_COLOR: egui::Color32 = egui::Color32::from_rgb(200, 200, 200);
+
 const TX_MENU_OPEN_ICON: egui::ImageSource<'_> = egui::include_image!("../../assets/menu-tx-open-48.png");
 const TX_MENU_CLOSE_ICON: egui::ImageSource<'_> = egui::include_image!("../../assets/menu-tx-close-48.png");
 const RX_MENU_OPEN_ICON: egui::ImageSource<'_> = egui::include_image!("../../assets/menu-rx-open-48.png");
@@ -13,10 +15,8 @@ const MENU_TX_CAMERA_FOCUS: egui::ImageSource<'_> = egui::include_image!("../../
 const MENU_TX_CAMERA_FOCUS_ACTIVE: egui::ImageSource<'_> = egui::include_image!("../../assets/menu-tx-camera-focus-active-48.png");
 const MENU_RX_CAMERA_FOCUS: egui::ImageSource<'_> = egui::include_image!("../../assets/menu-rx-camera-focus-48.png");
 const MENU_RX_CAMERA_FOCUS_ACTIVE: egui::ImageSource<'_> = egui::include_image!("../../assets/menu-rx-camera-focus-active-48.png");
-const MENU_RESET: egui::ImageSource<'_> = egui::include_image!("../../assets/menu-reset-48.png");
 const MENU_GAF: egui::ImageSource<'_> = egui::include_image!("../../assets/menu-gaf-48.png");
-
-const TEXT_COLOR: egui::Color32 = egui::Color32::from_rgb(200, 200, 200);
+pub(crate) const RESET_ICON: egui::ImageSource<'_> = egui::include_image!("../../assets/menu-reset-48.png");
 
 pub struct MenuPlugin;
 
@@ -160,7 +160,7 @@ impl MenuWidget {
                         .color(TEXT_COLOR)
                         .monospace();
                     if ui.add(
-                        egui::Button::new(MENU_RESET)
+                        egui::Button::new(RESET_ICON)
                             .frame_when_inactive(false)
                         )
                         .on_hover_text(hover_text)

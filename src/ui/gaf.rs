@@ -22,12 +22,18 @@ const GAF_RENDER_SIZE: usize = 400;
 const GAF_DB_MIN: f64 = -30.0;
 /// Fallback half-extent [m] when a resolution is degenerate (matches BSARConf).
 const GAF_FALLBACK_HALF_EXTENT_M: f64 = 1000.0;
-/// Overlaid iso-level contours [dB] with their (R, G, B) colors.
-const GAF_CONTOURS: [(f64, (u8, u8, u8)); 3] = [
+/// Overlaid iso-level contours [dB] with their (R, G, B) colors, on a warm
+/// ramp from red (main lobe) to pale yellow (far sidelobes).
+const GAF_CONTOURS: [(f64, (u8, u8, u8)); 5] = [
     (-3.0, (255, 60, 60)),   // half-power resolution cell
+    (-6.0, (255, 105, 55)),  // half-amplitude
     (-10.0, (255, 150, 60)),
+    (-13.0, (255, 182, 74)),
     (-20.0, (255, 210, 90)),
 ];
+/// Default/minimum side of the GAF window's square plot area, in points.
+const GAF_WINDOW_SIDE: f32 = 460.0;
+const GAF_PLOT_MIN_SIDE: f32 = 180.0;
 
 /// Cached GAF texture and iso-dB contours, rebuilt only when the inputs
 /// change. The open/close state lives in [`crate::ui::MenuWidget`] (the menu
@@ -212,27 +218,44 @@ pub fn show_gaf_window(
         .resizable(true)
         .collapsible(true)
         .default_open(true)
+        .default_size(egui::vec2(GAF_WINDOW_SIDE, GAF_WINDOW_SIDE + 40.0))
+        .min_size(egui::vec2(GAF_PLOT_MIN_SIDE, GAF_PLOT_MIN_SIDE))
         // No anchor: the window is freely draggable, opening centered the first
         // time and then remembering wherever the user leaves it.
-        .default_pos(ctx.content_rect().center() - egui::vec2(240.0, 260.0))
+        .default_pos(
+            ctx.content_rect().center()
+                - 0.5 * egui::vec2(GAF_WINDOW_SIDE, GAF_WINDOW_SIDE + 40.0),
+        )
         .show(ctx, |ui| {
             match (&gaf_state.texture, gaf_state.cache_key) {
                 (Some(texture), Some(key)) => {
-                    ui.label(
-                        egui::RichText::new("Point-target response, 0 dB = white")
-                            .color(egui::Color32::from_rgb(200, 200, 200)),
-                    );
+                    ui.vertical_centered(|ui| {
+                        ui.label(
+                            egui::RichText::new("Point-target response, 0 dB = white")
+                                .color(egui::Color32::from_rgb(200, 200, 200)),
+                        )
+                    });                    
                     // egui_plot frames the image with metric axes and gives
                     // zoom/pan, a cursor coordinate readout and a legend that
                     // toggles the individual iso-dB contours.
                     let extent = 2.0 * key.half_extent_m;
+                    // Square plot filling whatever the (resizable) window
+                    // leaves after the caption, so dragging the window corner
+                    // actually grows the plot.
+                    let available = ui.available_size();
+                    let side = available.x.min(available.y).max(GAF_PLOT_MIN_SIDE);
                     egui_plot::Plot::new("gaf_plot")
-                        .width(420.0)
-                        .height(420.0)
+                        .width(side)
+                        .height(side)
                         .data_aspect(1.0) // Equal Easting/Northing scales
                         .x_axis_label("Easting [m]")
                         .y_axis_label("Northing [m]")
-                        .legend(egui_plot::Legend::default())
+                        // Insertion order keeps the legend listed from the
+                        // highest level down (egui_plot sorts alphabetically by
+                        // default, which would read -10, -13, -20, -3, -6).
+                        .legend(
+                            egui_plot::Legend::default().follow_insertion_order(true),
+                        )
                         .show(ui, |plot_ui| {
                             plot_ui.image(egui_plot::PlotImage::new(
                                 "GAF intensity",
@@ -362,7 +385,8 @@ mod tests {
                 }
             }
         }
-        // The -3 dB cell must be tighter than the -20 dB one
+        // Levels are ordered from the main lobe outwards, so each contour must
+        // enclose the previous one (checked on the farthest reach of each).
         let extent_of = |i: usize| {
             contours[i]
                 .2
@@ -370,12 +394,17 @@ mod tests {
                 .flatten()
                 .fold(0.0f64, |max, &[x, y]| max.max(x.hypot(y)))
         };
-        assert!(
-            extent_of(0) < extent_of(2),
-            "the -3 dB contour must be inside the -20 dB one"
-        );
+        for i in 1..contours.len() {
+            assert!(
+                extent_of(i - 1) < extent_of(i),
+                "the {} dB contour must lie inside the {} dB one",
+                contours[i - 1].0,
+                contours[i].0
+            );
+        }
     }
 }
+
 
 
 

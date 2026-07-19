@@ -16,14 +16,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Per-section "reset to defaults" buttons on the Transmitter and Receiver
   panels (Carrier, Antenna orientation, Beamwidth, System).
 - Value labels on the ground iso-Range / iso-Doppler texture, with the unit
-  chosen per family for readability (m/km, Hz/kHz) and decluttering.
+  chosen per family for readability (m/km, Hz/kHz) and decluttering. Labels are
+  rotated to follow their contour and carry a ground-colored halo that
+  interrupts the line underneath, like plotly's inline contour labels.
+
+### Changed
+
+- Iso-Doppler contours are drawn thinner than the iso-Range ones so the two
+  families stay distinguishable where they cross.
+- The iso-range/iso-Doppler contours are rasterized by a small anti-aliased
+  polyline rasterizer (`src/raster.rs`) instead of `plotters`, which drew them
+  with an integer-coordinate Bresenham algorithm and no anti-aliasing. The lines
+  are now smooth and sub-pixel accurate, and the `plotters` dependency is gone.
 - Normalized Generalized Ambiguity Function (GAF) plot, opened from a menu
-  button, showing the point-target response with its −3/−10/−20 dB resolution
-  contours (cross-validated bit-exact against the BSARConf reference), framed
-  by `egui_plot` with metric Easting/Northing axes, grid, zoom and pan. The
-  iso-dB contours are drawn as vector plot lines over the intensity heatmap, so
-  they stay crisp at any zoom and can be toggled from the plot legend. The
-  window is freely draggable.
+  button, showing the point-target response with its −3, −6, −10, −13 and
+  −20 dB resolution contours (cross-validated bit-exact against the BSARConf
+  reference), framed by `egui_plot` with metric Easting/Northing axes, grid,
+  zoom and pan. The iso-dB contours are drawn as vector plot lines over the
+  intensity heatmap, so they stay crisp at any zoom and can be toggled from the
+  plot legend. The window is freely draggable and resizable, the plot following
+  the window size.
 
 ### Fixed
 
