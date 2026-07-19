@@ -37,5 +37,5 @@ First stable release.
 - Regression test suite covering the BSAR formulas, footprint geometry, contour
   extraction, geodesy conversions, and the monostatic update pipeline.
 
-[unreleased]: https://github.com/oboisot/BSARGeom/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/oboisot/BSARGeom/releases/tag/v1.0.0
+[unreleased]: https://github.com/oboisot/BSARGeom/compare/1.0.0...HEAD
+[1.0.0]: https://github.com/oboisot/BSARGeom/releases/tag/1.0.0

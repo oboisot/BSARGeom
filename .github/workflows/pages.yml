@@ -1,0 +1,63 @@
+name: Deploy web to GitHub Pages
+
+on:
+  push:
+    tags:
+      - '[0-9]+.*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one Pages deployment at a time; never cancel a running production deploy
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Wasm bundle
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        run: |
+          rustup update --no-self-update stable
+          rustup target add wasm32-unknown-unknown
+
+      - name: Cache cargo artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Also cache ~/.cargo/bin so the pinned bevy CLI install is reused
+          cache-bin: true
+          cache-all-crates: true
+
+      - name: Install bevy CLI (pinned)
+        # The bevy CLI is git-only (the crates.io `bevy_cli` name is a
+        # placeholder); pin the revision for reproducible deployments.
+        run: cargo install --git https://github.com/TheBevyFlock/bevy_cli --rev 8825c5fab8eeaf50a2e3b3d5ed5d1556627d7836 --locked bevy_cli
+
+      - name: Build and bundle web release
+        # --yes lets the CLI install the matching wasm-bindgen non-interactively
+        run: bevy build --yes --release web --bundle --wasm-opt=true
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: target/bevy_web/web-release/bsargeom
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5

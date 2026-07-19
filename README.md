@@ -1,6 +1,8 @@
 # BSARGeom
  A new [BSARConf](https://github.com/oboisot/BSARConf) but improved with [Rust](https://www.rust-lang.org/) / [Bevy](https://github.com/bevyengine/bevy) / [egui](https://github.com/emilk/egui)
 
+**Live demo:** <https://oboisot.github.io/BSARGeom/> (requires a WebGPU-capable browser)
+
 
 ## Building for the Web
 The easiest way to build the application for the Web, i.e. WASM build, is to use the [bevy CLI](https://github.com/TheBevyFlock/bevy_cli)
