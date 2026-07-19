@@ -7,7 +7,7 @@ use bevy::{
 };
 use crate::{
     bsar::{SPEED_OF_LIGHT_IN_VACUUM, bistatic_range_sg, doppler_frequency_sg},
-    contour::{march, Field},
+    contour::{march_levels, Field},
     constants::HALF_PLANE_LENGTH,
     entities::AntennaBeamFootprintState,
     raster::{draw_polyline_bgrx, fill_bgrx},
@@ -253,10 +253,13 @@ impl IsoRangeDopplerPlaneState {
             };
 
             fill_bgrx(bytes, GROUND_GREY_RGB);
+            // Contours of every level in a single pass over each grid
+            let iso_range_contours = march_levels(&self.iso_range, &iso_range_levels);
+            let iso_doppler_contours = march_levels(&self.iso_doppler, &iso_doppler_levels);
             // Iso-range
-            for &level in &iso_range_levels {
+            for (&level, contours) in iso_range_levels.iter().zip(iso_range_contours) {
                 let mut longest_chunk: Vec<(f64, f64)> = Vec::new();
-                for line in march(&self.iso_range, level) { // Compute contours
+                for line in contours { // Contours of this level
                     if line.len() > longest_chunk.len() {
                         longest_chunk = line.clone();
                     }
@@ -282,9 +285,9 @@ impl IsoRangeDopplerPlaneState {
                 }
             }
             // Iso-doppler: negative levels dashed, positive solid
-            for &level in &iso_doppler_levels {
+            for (&level, contours) in iso_doppler_levels.iter().zip(iso_doppler_contours) {
                 let mut longest_chunk: Vec<(f64, f64)> = Vec::new();
-                for line in march(&self.iso_doppler, level) { // Compute contours
+                for line in contours { // Contours of this level
                     if line.len() > longest_chunk.len() {
                         longest_chunk = line.clone();
                     }
@@ -623,6 +626,8 @@ mod tests {
             "label row {label_row} does not match the drawn contour row {inked_row}"
         );
     }
+
+
 
 
 

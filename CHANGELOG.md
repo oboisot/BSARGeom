@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   polyline rasterizer (`src/raster.rs`) instead of `plotters`, which drew them
   with an integer-coordinate Bresenham algorithm and no anti-aliasing. The lines
   are now smooth and sub-pixel accurate, and the `plotters` dependency is gone.
+- Contours for all levels are extracted in a single pass over the grid
+  (`contour::march_levels`) rather than one full grid scan per level. Together
+  with the rasterizer change the ground texture rebuild went from ~82 ms to
+  ~51 ms per update, despite now being anti-aliased.
 - Normalized Generalized Ambiguity Function (GAF) plot, opened from a menu
   button, showing the point-target response with its −3, −6, −10, −13 and
   −20 dB resolution contours (cross-validated bit-exact against the BSARConf

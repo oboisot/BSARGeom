@@ -14,7 +14,7 @@ use bevy::prelude::Resource;
 use bevy_egui::egui;
 
 use crate::bsar::{sinc, BsarInfos, SPEED_OF_LIGHT_IN_VACUUM};
-use crate::contour::{march, Field};
+use crate::contour::{march_levels, Field};
 
 /// Ground patch resolution (pixels per side) of the rendered GAF image.
 const GAF_RENDER_SIZE: usize = 400;
@@ -159,10 +159,14 @@ fn gaf_contours(
     key: &GafKey,
 ) -> Vec<(f64, egui::Color32, Vec<Vec<[f64; 2]>>)> {
     let step = 2.0 * key.half_extent_m / (field.size - 1) as f64;
-    GAF_CONTOURS
-        .iter()
-        .map(|&(level, (r, g, b))| {
-            let polylines = march(field, level)
+    // All levels in a single pass over the grid. `march_levels` keeps the
+    // caller's ordering, so the descending GAF_CONTOURS order is preserved.
+    let levels: Vec<f64> = GAF_CONTOURS.iter().map(|&(level, _)| level).collect();
+    march_levels(field, &levels)
+        .into_iter()
+        .zip(GAF_CONTOURS)
+        .map(|(contours, (level, (r, g, b)))| {
+            let polylines = contours
                 .into_iter()
                 .map(|line| {
                     line.into_iter()
