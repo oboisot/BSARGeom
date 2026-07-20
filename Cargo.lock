@@ -1771,6 +1771,7 @@ dependencies = [
  "egui_plot",
  "image",
  "js-sys",
+ "png",
  "wasm-bindgen",
  "web-sys",
 ]

@@ -43,6 +43,7 @@ ab_glyph = "0.2"
 # against egui 0.34. Using 0.34 (egui 0.33) or 0.36 (egui 0.35) silently
 # duplicates egui in the tree, like the bevy_egui mismatch described above.
 egui_plot = "0.35"
+png = "0.18"
 
 # Native-only: the in-app "save as" dialog. Its version is offset from egui's —
 # 0.13 is the release built against egui 0.34; 0.12 pulls egui 0.33 and 0.14

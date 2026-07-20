@@ -9,19 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- "Save image" button on the Generalized Ambiguity Function window, exporting
-  the plotted patch (heatmap with the iso-dB contours baked in) as a PNG. The
-  desktop build opens a "save as" dialog (`egui-file-dialog`) and reports the
-  written path; the web build hands the bytes to the browser as a download.
+- "Save image" button on the Generalized Ambiguity Function window, exporting a
+  standalone figure — the heatmap with its iso-dB contours, metric
+  Easting/Northing axes with ticks, a title and a legend — as a PNG. The figure
+  is rendered (not upscaled) at print resolution, 1626x1590 px tagged 300 dpi,
+  i.e. about 5.4 x 5.3 inches. The desktop build opens a "save as" dialog
+  (`egui-file-dialog`) and reports the written path; the web build hands the
+  bytes to the browser as a download.
 - Reset button on the TRANSMITTER / RECEIVER SETTINGS title row, restoring every
   setting of that element (carrier, antenna orientation, beamwidth and system)
   to its defaults in one click.
+- `BSARGEOM_DEBUG_GAF=1` logs a line whenever the GAF plot's inputs or layout
+  change between frames (and stays silent otherwise), to pin down flicker in the
+  running application.
 
-### Changed
+### Fixed
 
-- The GAF plot uses fixed bounds instead of an automatic fit, re-fitting only
-  when the plotted patch changes size, so the view is reproducible from frame to
-  frame.
+- The GAF plot could flicker: egui_plot derives its axis thickness from the
+  previous frame, and with `data_aspect` that fed back into the bounds
+  (bounds -> y tick labels -> axis width -> plot width -> bounds). For some
+  geometries the loop had no fixed point and the y-bounds alternated between two
+  values every frame. The y-axis width is now pinned, which breaks the loop.
 
 ## [1.1.0] - 2026-07-19
 
