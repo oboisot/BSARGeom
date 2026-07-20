@@ -13,11 +13,14 @@ use bevy::math::DVec3;
 use bevy::prelude::Resource;
 use bevy_egui::egui;
 
-use crate::bsar::{sinc, BsarInfos, SPEED_OF_LIGHT_IN_VACUUM};
-use crate::contour::{march_levels, Field};
-use crate::download::SaveRequest;
-use crate::raster::{draw_polyline_bgrx, fill_bgrx};
-use crate::textdraw::{draw_text_bgrx, text_width};
+use crate::{
+    bsar::{sinc, BsarInfos, SPEED_OF_LIGHT_IN_VACUUM},
+    contour::{march_levels, Field},
+    download::SaveRequest,
+    raster::{draw_polyline_bgrx, fill_bgrx},
+    textdraw::{draw_text_bgrx, text_width},
+    ui::menu::SAVE_ICON,
+};
 
 /// Ground patch resolution (pixels per side) of the rendered GAF image.
 const GAF_RENDER_SIZE: usize = 400;
@@ -605,14 +608,14 @@ pub fn show_gaf_window(
                                 },
                                 #[cfg(target_arch = "wasm32")]
                                 {
-                                    "Download the image as a PNG"
+                                    "Downloads the image as a PNG"
                                 },
                             )
                             .color(egui::Color32::from_rgb(200, 200, 200))
                             .monospace();
                             let saving = gaf_state.save_request.is_some();
                             if ui
-                                .add_enabled(!saving, egui::Button::new("Save image"))
+                                .add_enabled(!saving, egui::Button::image(SAVE_ICON).frame_when_inactive(false))
                                 .on_hover_text(hover)
                                 .clicked()
                             {
