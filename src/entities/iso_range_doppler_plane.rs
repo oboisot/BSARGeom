@@ -30,9 +30,8 @@ const ISO_RANGE_STROKE_PX: f32 = 6.0;
 const ISO_DOPPLER_STROKE_PX: f32 = 3.5;
 // Dash pattern (on, off) in pixels for the negative iso-Doppler contours.
 const ISO_DOPPLER_DASH_PX: (f32, f32) = (16.0, 20.0);
-// Contour value labels: ~45 px on the 2048² texture matches the ~12 px labels
-// of BSARConf's ~500 px plotly plot; tiny chunks are left unlabeled.
-const LABEL_FONT_SIZE: f32 = 45.0;
+// Contour value labels; tiny chunks are left unlabeled.
+const LABEL_FONT_SIZE: f32 = 30.0;
 const LABEL_MIN_CHUNK_POINTS: usize = 8;
 // Minimum spacing between two labels of the same family, in texture pixels.
 const LABEL_MIN_SPACING_PX: f32 = 220.0;

@@ -64,7 +64,7 @@ impl TxPanelWidget {
         self.system_needs_update = false;
 
         // Tx Carrier UI
-        carrier_ui(
+        let reset_all = carrier_ui(
             ui,
             "tx",
             "TRANSMITTER SETTINGS",
@@ -78,11 +78,12 @@ impl TxPanelWidget {
             &mut self.velocity_vector_needs_update
         );
 
-        // Tx System UI
+        // Tx System UI ("reset all" from the title row also resets it)
         tx_system_ui(
             ui,
             tx_carrier_state,
             tx_antenna_beam_state,
+            reset_all,
             &mut self.system_needs_update
         );
 
@@ -287,6 +288,7 @@ fn tx_system_ui(
     ui: &mut egui::Ui,
     tx_carrier_state: &mut TxCarrierState,
     tx_antenna_beam_state: &mut TxAntennaBeamState,
+    reset_all: bool,
     system_needs_update: &mut bool,
 ) {
     let mut old_state = 0.0f64;
@@ -296,7 +298,7 @@ fn tx_system_ui(
         ui,
         egui::RichText::new("SYSTEM").strong(),
         "Resets the System settings to their defaults"
-    ) {
+    ) || reset_all {
         let default_state = TxCarrierState::default();
         tx_carrier_state.center_frequency_ghz = default_state.center_frequency_ghz;
         tx_carrier_state.bandwidth_mhz = default_state.bandwidth_mhz;

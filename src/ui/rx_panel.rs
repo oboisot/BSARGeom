@@ -61,7 +61,7 @@ impl RxPanelWidget {
         self.system_needs_update = false;
 
         // Rx Carrier UI
-        ui.add_enabled_ui(
+        let reset_all = ui.add_enabled_ui(
             !menu_widget.is_monostatic,
             |ui| {
                 carrier_ui(
@@ -76,17 +76,18 @@ impl RxPanelWidget {
                     &RxAntennaBeamState::default().inner,
                     &mut self.transform_needs_update,
                     &mut self.velocity_vector_needs_update
-                );
+                )
             }
-        );
+        ).inner;
 
-        // Rx System UI
+        // Rx System UI ("reset all" from the title row also resets it)
         rx_system_ui(
             ui,
             rx_carrier_state,
             rx_antenna_beam_state,
             menu_widget.is_monostatic,
             bsar_infos_state,
+            reset_all,
             &mut self.system_needs_update
         );
     }
@@ -299,6 +300,7 @@ fn rx_system_ui(
     rx_antenna_beam_state: &mut RxAntennaBeamState,
     is_monostatic: bool,
     bsar_infos_state: &mut BsarInfosState,
+    reset_all: bool,
     system_needs_update: &mut bool,
 ) {
     let mut old_state = 0.0f64;
@@ -308,7 +310,7 @@ fn rx_system_ui(
         ui,
         egui::RichText::new("SYSTEM").strong(),
         "Resets the System settings to their defaults"
-    ) {
+    ) || reset_all {
         let default_state = RxCarrierState::default();
         rx_carrier_state.noise_temperature_k = default_state.noise_temperature_k;
         rx_carrier_state.noise_factor_db = default_state.noise_factor_db;
