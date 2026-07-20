@@ -599,7 +599,14 @@ pub fn show_gaf_window(
                         );
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             let hover = egui::RichText::new(
-                                "Saves the plotted image as a PNG (downloaded by the browser on the web build)",
+                                #[cfg(not(target_arch = "wasm32"))]
+                                {
+                                    "Saves the image as a PNG"
+                                },
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    "Download the image as a PNG"
+                                },
                             )
                             .color(egui::Color32::from_rgb(200, 200, 200))
                             .monospace();
