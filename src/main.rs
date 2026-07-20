@@ -11,6 +11,7 @@ pub mod camera;
 pub mod constants;
 pub mod contour;
 pub mod coordinates;
+pub mod download;
 pub mod entities;
 pub mod raster;
 pub mod scene;

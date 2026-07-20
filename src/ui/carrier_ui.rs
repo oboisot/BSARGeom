@@ -29,6 +29,10 @@ pub fn heading_with_reset(ui: &mut egui::Ui, title: egui::RichText, hover: &str)
 /// ("tx_carrier_grid", ...) so widget memory is preserved; it must not change.
 /// The `default_*` states are the side-specific defaults restored by the
 /// per-section reset buttons.
+///
+/// Returns `true` when the title-row reset was clicked, i.e. the whole side
+/// must go back to its defaults. The carrier/antenna sections are restored
+/// here; the caller additionally restores its own SYSTEM section.
 pub fn carrier_ui(
     ui: &mut egui::Ui,
     id_salt: &str,
@@ -41,15 +45,15 @@ pub fn carrier_ui(
     default_antenna_beam_state: &AntennaBeamState,
     transform_needs_update: &mut bool,
     velocity_vector_needs_update: &mut bool,
-)  {
+) -> bool {
     let mut old_state = 0.0f64;
 
     ui.separator();
-    ui.vertical_centered(|ui| ui.label(
-        egui::RichText::new(title)
-            .size(15.0)
-            .strong()
-    ));
+    let reset_all = heading_with_reset(
+        ui,
+        egui::RichText::new(title).size(15.0).strong(),
+        "Resets every setting of this element to its defaults",
+    );
     ui.separator();
 
     ui.separator();
@@ -57,7 +61,7 @@ pub fn carrier_ui(
         ui,
         egui::RichText::new("CARRIER").strong(),
         "Resets the Carrier settings to their defaults"
-    ) {
+    ) || reset_all {
         // Only the fields edited in this section (derived fields are
         // recomputed by the update systems from the flags below)
         carrier_state.height_m = default_carrier_state.height_m;
@@ -183,7 +187,7 @@ pub fn carrier_ui(
         ui,
         egui::RichText::new("Orientation"),
         "Resets the Antenna orientation to its defaults"
-    ) {
+    ) || reset_all {
         antenna_state.heading_deg = default_antenna_state.heading_deg;
         antenna_state.elevation_deg = default_antenna_state.elevation_deg;
         antenna_state.bank_deg = default_antenna_state.bank_deg;
@@ -262,7 +266,7 @@ pub fn carrier_ui(
         ui,
         egui::RichText::new("Beamwidth (half-power)"),
         "Resets the Antenna beamwidths to their defaults"
-    ) {
+    ) || reset_all {
         // Only the beamwidths: the antenna gain belongs to the SYSTEM section
         antenna_beam_state.elevation_beam_width_deg = default_antenna_beam_state.elevation_beam_width_deg;
         antenna_beam_state.azimuth_beam_width_deg = default_antenna_beam_state.azimuth_beam_width_deg;
@@ -315,4 +319,6 @@ pub fn carrier_ui(
             }
             ui.end_row();
         });
+
+    reset_all
 }

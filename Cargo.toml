@@ -44,6 +44,20 @@ ab_glyph = "0.2"
 # duplicates egui in the tree, like the bevy_egui mismatch described above.
 egui_plot = "0.35"
 
+# Native-only: the in-app "save as" dialog. Its version is offset from egui's —
+# 0.13 is the release built against egui 0.34; 0.12 pulls egui 0.33 and 0.14
+# pulls egui 0.35, either of which silently duplicates egui in the tree (the
+# same trap as the bevy_egui/egui_plot pins above).
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+egui-file-dialog = "0.13"
+
+# Web-only: the browser has no filesystem, so saving an image goes through a
+# Blob + download link (see src/download.rs). Native builds pull none of this.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = ["Blob", "BlobPropertyBag", "Url", "Document", "Window", "HtmlAnchorElement", "Element", "HtmlElement"] }
+
 # Size optimization (see: https://github.com/johnthagen/min-sized-rust)
 [profile.release]
 strip = true # = "symbols" Automatically strip symbols from the binary.

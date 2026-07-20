@@ -6,6 +6,8 @@ pub use carrier_ui::{carrier_ui, heading_with_reset};
 
 mod gaf;
 pub use gaf::{show_gaf_window, GafState};
+#[cfg(test)]
+pub(crate) use gaf::gaf_key;
 
 mod menu;
 pub use menu::{CameraFocus, MenuPlugin, MenuWidget};
@@ -163,4 +165,49 @@ mod tests {
         assert!(pan_orbit_camera.force_update);
         assert!(!app.world().resource::<MenuWidget>().reset_view_requested);
     }
+
+    /// Diagnostic: in monostatic mode the GAF inputs must be stable across
+    /// frames. An oscillating key would rebuild the texture with different
+    /// content every frame, i.e. visible flicker.
+    #[test]
+    fn gaf_key_is_stable_across_frames_in_monostatic() {
+        let mut app = test_app();
+        {
+            let mut menu = app.world_mut().resource_mut::<MenuWidget>();
+            menu.is_monostatic = true;
+            menu.was_monostatic = true;
+        }
+        app.update(); // startup
+        // Mirror Tx onto Rx as the egui pass does in monostatic mode
+        {
+            let world = app.world_mut();
+            let tx_inner = world.resource::<TxCarrierState>().inner.clone();
+            let tx_ant = world.resource::<TxAntennaState>().inner.clone();
+            let tx_beam = world.resource::<TxAntennaBeamState>().inner.clone();
+            world.resource_mut::<RxCarrierState>().inner = tx_inner;
+            world.resource_mut::<RxAntennaState>().inner = tx_ant;
+            world.resource_mut::<RxAntennaBeamState>().inner = tx_beam;
+            world.resource_mut::<RxPanelWidget>().transform_needs_update = true;
+            world.resource_mut::<RxPanelWidget>().velocity_vector_needs_update = true;
+            world.resource_mut::<RxPanelWidget>().system_needs_update = true;
+        }
+        app.update();
+
+        let key_of = |app: &App| {
+            let infos = &app.world().resource::<BsarInfosState>().inner;
+            let tx = app.world().resource::<TxCarrierState>();
+            crate::ui::gaf_key(infos, tx.bandwidth_mhz * 1e6, tx.center_frequency_ghz * 1e9)
+        };
+        let first = key_of(&app);
+        assert!(first.is_some(), "monostatic default scene must yield a GAF");
+        for frame in 0..8 {
+            app.update();
+            let now = key_of(&app);
+            assert_eq!(
+                now, first,
+                "GAF key changed on frame {frame}: {now:?} != {first:?}"
+            );
+        }
+    }
+
 }

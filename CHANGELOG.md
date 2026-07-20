@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- "Save image" button on the Generalized Ambiguity Function window, exporting
+  the plotted patch (heatmap with the iso-dB contours baked in) as a PNG. The
+  desktop build opens a "save as" dialog (`egui-file-dialog`) and reports the
+  written path; the web build hands the bytes to the browser as a download.
+- Reset button on the TRANSMITTER / RECEIVER SETTINGS title row, restoring every
+  setting of that element (carrier, antenna orientation, beamwidth and system)
+  to its defaults in one click.
+
+### Changed
+
+- The GAF plot uses fixed bounds instead of an automatic fit, re-fitting only
+  when the plotted patch changes size, so the view is reproducible from frame to
+  frame.
+
 ## [1.1.0] - 2026-07-19
 
 ### Added

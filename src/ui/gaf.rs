@@ -15,6 +15,8 @@ use bevy_egui::egui;
 
 use crate::bsar::{sinc, BsarInfos, SPEED_OF_LIGHT_IN_VACUUM};
 use crate::contour::{march_levels, Field};
+use crate::download::SaveRequest;
+use crate::raster::draw_polyline_bgrx;
 
 /// Ground patch resolution (pixels per side) of the rendered GAF image.
 const GAF_RENDER_SIZE: usize = 400;
@@ -34,6 +36,10 @@ const GAF_CONTOURS: [(f64, (u8, u8, u8)); 5] = [
 /// Default/minimum side of the GAF window's square plot area, in points.
 const GAF_WINDOW_SIDE: f32 = 460.0;
 const GAF_PLOT_MIN_SIDE: f32 = 180.0;
+/// Contour stroke used when baking the plot into an exported PNG.
+const GAF_EXPORT_STROKE_PX: f32 = 1.6;
+/// File name used when saving/downloading the GAF image.
+const GAF_EXPORT_FILE_NAME: &str = "bsargeom_gaf.png";
 
 /// Cached GAF texture and iso-dB contours, rebuilt only when the inputs
 /// change. The open/close state lives in [`crate::ui::MenuWidget`] (the menu
@@ -46,6 +52,10 @@ pub struct GafState {
     /// from the plot legend.
     contours: Vec<(f64, egui::Color32, Vec<Vec<[f64; 2]>>)>,
     cache_key: Option<GafKey>,
+    /// Result of the last "save image" click, shown under the plot.
+    save_status: Option<String>,
+    /// Save in flight (native: the "save as" dialog; web: resolves at once).
+    save_request: Option<SaveRequest>,
 }
 
 /// The GAF dB grid, as a [`Field`] so contours can be extracted with the same
@@ -67,8 +77,8 @@ impl Field for GafField {
 
 /// The inputs that fully determine the rendered image; equality gates the
 /// texture rebuild.
-#[derive(Clone, Copy, PartialEq)]
-struct GafKey {
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub(crate) struct GafKey {
     betag: DVec3,
     dbetag: DVec3,
     b_over_c0: f64,
@@ -86,7 +96,7 @@ fn gaf_db(betag: DVec3, dbetag: DVec3, b_over_c0: f64, tint_over_lem: f64, x: f6
 
 /// Builds the render inputs from the current BSAR state, or `None` when the
 /// geometry is degenerate (NaN bisectors/resolutions/integration time).
-fn gaf_key(bsar_infos: &BsarInfos, bandwidth_hz: f64, center_frequency_hz: f64) -> Option<GafKey> {
+pub(crate) fn gaf_key(bsar_infos: &BsarInfos, bandwidth_hz: f64, center_frequency_hz: f64) -> Option<GafKey> {
     let lem = SPEED_OF_LIGHT_IN_VACUUM / center_frequency_hz;
     let tint = bsar_infos.integration_time_s;
     if !bsar_infos.betag.is_finite()
@@ -184,6 +194,61 @@ fn gaf_contours(
         .collect()
 }
 
+/// Renders the plot content (greyscale heatmap with the iso-dB contours drawn
+/// in) to PNG bytes, so what is saved matches what is displayed.
+fn gaf_png_bytes(
+    key: &GafKey,
+    contours: &[(f64, egui::Color32, Vec<Vec<[f64; 2]>>)],
+) -> Option<Vec<u8>> {
+    use image::ImageEncoder as _;
+
+    let field = compute_gaf_grid(key);
+    let size = field.size;
+    // Compose in BGRX so the shared anti-aliased rasterizer can be reused
+    let mut bgrx = vec![0u8; size * size * 4];
+    for (i, &db) in field.data.iter().enumerate() {
+        let intensity = ((db - GAF_DB_MIN) / -GAF_DB_MIN).clamp(0.0, 1.0);
+        let grey = (intensity * 255.0).round() as u8;
+        bgrx[i * 4] = grey;
+        bgrx[i * 4 + 1] = grey;
+        bgrx[i * 4 + 2] = grey;
+    }
+    let step = 2.0 * key.half_extent_m / (size - 1) as f64;
+    for (_level, color, polylines) in contours {
+        for polyline in polylines {
+            let points: Vec<(f32, f32)> = polyline
+                .iter()
+                .map(|&[x, y]| {
+                    (
+                        ((x + key.half_extent_m) / step) as f32,
+                        ((key.half_extent_m - y) / step) as f32,
+                    )
+                })
+                .collect();
+            draw_polyline_bgrx(
+                &mut bgrx,
+                size,
+                size,
+                &points,
+                GAF_EXPORT_STROKE_PX,
+                (color.r(), color.g(), color.b()),
+                None,
+            );
+        }
+    }
+    let mut rgb = vec![0u8; size * size * 3];
+    for (i, pixel) in bgrx.chunks_exact(4).enumerate() {
+        rgb[i * 3] = pixel[2]; // R
+        rgb[i * 3 + 1] = pixel[1]; // G
+        rgb[i * 3 + 2] = pixel[0]; // B
+    }
+    let mut png = Vec::new();
+    image::codecs::png::PngEncoder::new(&mut png)
+        .write_image(&rgb, size as u32, size as u32, image::ExtendedColorType::Rgb8)
+        .ok()?;
+    Some(png)
+}
+
 /// Shows the GAF window while `open` is true, (re)building the cached texture
 /// only when the geometry changed. `open` is the menu's toggle flag and is set
 /// to `false` when the window's close button is clicked.
@@ -196,10 +261,22 @@ pub fn show_gaf_window(
     bandwidth_hz: f64,
     center_frequency_hz: f64,
 ) {
+    // Drive an in-flight save first: on native its dialog is a window of its
+    // own, so it must keep running even if the GAF window was closed meanwhile.
+    if let Some(request) = &mut gaf_state.save_request
+        && let Some(status) = request.update(ctx)
+    {
+        gaf_state.save_status = Some(status);
+        gaf_state.save_request = None;
+    }
+
     if !*open {
         return;
     }
     let key = gaf_key(bsar_infos, bandwidth_hz, center_frequency_hz);
+    // Refit the view only when the plotted extent actually changes, so the
+    // bounds stay fixed from frame to frame (see `refit_bounds` below).
+    let mut refit_bounds = false;
     match key {
         Some(key) => {
             if gaf_state.cache_key != Some(key) {
@@ -207,6 +284,9 @@ pub fn show_gaf_window(
                 let image = render_gaf_image(&field);
                 gaf_state.texture = Some(ctx.load_texture("gaf", image, egui::TextureOptions::LINEAR));
                 gaf_state.contours = gaf_contours(&field, &key);
+                refit_bounds = gaf_state
+                    .cache_key
+                    .is_none_or(|previous| previous.half_extent_m != key.half_extent_m);
                 gaf_state.cache_key = Some(key);
             }
         }
@@ -233,12 +313,38 @@ pub fn show_gaf_window(
         .show(ctx, |ui| {
             match (&gaf_state.texture, gaf_state.cache_key) {
                 (Some(texture), Some(key)) => {
-                    ui.vertical_centered(|ui| {
+                    ui.horizontal(|ui| {
                         ui.label(
                             egui::RichText::new("Point-target response, 0 dB = white")
                                 .color(egui::Color32::from_rgb(200, 200, 200)),
-                        )
-                    });                    
+                        );
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            let hover = egui::RichText::new(
+                                "Saves the plotted image as a PNG (downloaded by the browser on the web build)",
+                            )
+                            .color(egui::Color32::from_rgb(200, 200, 200))
+                            .monospace();
+                            let saving = gaf_state.save_request.is_some();
+                            if ui
+                                .add_enabled(!saving, egui::Button::new("Save image"))
+                                .on_hover_text(hover)
+                                .clicked()
+                            {
+                                match gaf_png_bytes(&key, &gaf_state.contours) {
+                                    Some(png) => {
+                                        gaf_state.save_status = None;
+                                        gaf_state.save_request =
+                                            Some(SaveRequest::new(GAF_EXPORT_FILE_NAME, png));
+                                    }
+                                    None => {
+                                        gaf_state.save_status =
+                                            Some("Save failed: could not encode the image".to_string());
+                                    }
+                                }
+                            }
+                        });
+                    });
+
                     // egui_plot frames the image with metric axes and gives
                     // zoom/pan, a cursor coordinate readout and a legend that
                     // toggles the individual iso-dB contours.
@@ -260,7 +366,23 @@ pub fn show_gaf_window(
                         .legend(
                             egui_plot::Legend::default().follow_insertion_order(true),
                         )
+                        // Fixed bounds rather than an automatic fit: egui_plot
+                        // carries layout state between frames (it remembers the
+                        // previous axis thickness to fit tick labels), so with
+                        // `data_aspect` an automatic fit can depend on the
+                        // previous frame. Pinning the bounds keeps the view
+                        // reproducible frame to frame; `refit_bounds` re-fits it
+                        // whenever the plotted patch changes size.
+                        .auto_bounds(egui::Vec2b::FALSE)
                         .show(ui, |plot_ui| {
+                            // Fit the patch when it changes; the user keeps
+                            // control of zoom/pan the rest of the time.
+                            if refit_bounds {
+                                plot_ui.set_plot_bounds(egui_plot::PlotBounds::from_min_max(
+                                    [-key.half_extent_m, -key.half_extent_m],
+                                    [key.half_extent_m, key.half_extent_m],
+                                ));
+                            }
                             plot_ui.image(egui_plot::PlotImage::new(
                                 "GAF intensity",
                                 texture.id(),
@@ -283,6 +405,13 @@ pub fn show_gaf_window(
                                 }
                             }
                         });
+                    if let Some(status) = &gaf_state.save_status {
+                        ui.label(
+                            egui::RichText::new(status)
+                                .small()
+                                .color(egui::Color32::from_rgb(160, 160, 160)),
+                        );
+                    }
                 }
                 _ => {
                     ui.label("Invalid geometry: the GAF requires non-zero Tx/Rx velocities.");
@@ -407,8 +536,113 @@ mod tests {
             );
         }
     }
+
+    /// Frame-to-frame determinism guard for the GAF window.
+    ///
+    /// egui_plot's layout carries state across frames (it stores the previous
+    /// frame's axis thickness to fit tick labels), so with `data_aspect` an
+    /// automatic fit can feed back: bounds -> tick digits -> axis width ->
+    /// aspect correction -> bounds. Fixed bounds break that loop; this asserts
+    /// that a settled window with unchanged inputs renders byte-identically.
+    ///
+    /// Note: this does *not* reproduce the monostatic flicker that was reported
+    /// — that was never reproduced headlessly, so treat this as an invariant
+    /// guard rather than proof of a fix.
+    #[test]
+    fn monostatic_gaf_renders_identically_across_frames() {
+        use crate::entities::AntennaBeamFootprintState;
+
+        // Monostatic: the receiver sits exactly on the transmitter
+        let position = DVec3::new(0.0, -8000.0, 6000.0);
+        let velocity = DVec3::new(120.0, 0.0, 0.0);
+        let mut infos = BsarInfos::default();
+        infos.update(
+            &(-position), &velocity, &(-position), &velocity,
+            &AntennaBeamFootprintState::default(),
+            &AntennaBeamFootprintState::default(),
+            9.65e9, 300.0e6, 1.0, true, true,
+        );
+        assert!(
+            gaf_key(&infos, 300.0e6, 9.65e9).is_some(),
+            "the monostatic reference geometry must produce a GAF"
+        );
+
+        let ctx = egui::Context::default();
+        let mut gaf_state = GafState::default();
+        let mut frame = || {
+            let mut open = true;
+            let input = egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::pos2(0.0, 0.0),
+                    egui::vec2(1600.0, 1000.0),
+                )),
+                ..Default::default()
+            };
+            let output = ctx.run_ui(input, |ui| {
+                show_gaf_window(ui.ctx(), &mut open, &mut gaf_state, &infos, 300.0e6, 9.65e9);
+            });
+            format!("{:?}", output.shapes)
+        };
+        // Let fonts, window animation and the first layout settle
+        for _ in 0..8 {
+            frame();
+        }
+        let settled = frame();
+        for round in 0..4 {
+            assert_eq!(
+                frame(),
+                settled,
+                "GAF plot output changed on settled frame {round}: the layout oscillates (flicker)"
+            );
+        }
+    }
+
+
+    /// The exported PNG must be a real, decodable image of the plotted patch,
+    /// carrying the contour colors that are only overlaid in the live plot.
+    #[test]
+    fn gaf_png_export_is_a_decodable_image_with_contours() {
+        let key = reference_key();
+        let field = compute_gaf_grid(&key);
+        let contours = gaf_contours(&field, &key);
+        let png = gaf_png_bytes(&key, &contours).expect("the GAF must encode to PNG");
+        assert_eq!(&png[..8], b"\x89PNG\r\n\x1a\n", "not a PNG stream");
+
+        let decoded = image::load_from_memory(&png)
+            .expect("the exported PNG must decode")
+            .to_rgb8();
+        assert_eq!(
+            decoded.dimensions(),
+            (GAF_RENDER_SIZE as u32, GAF_RENDER_SIZE as u32)
+        );
+        // The main lobe is white at the centre ...
+        let centre = decoded.get_pixel(GAF_RENDER_SIZE as u32 / 2, GAF_RENDER_SIZE as u32 / 2);
+        assert!(centre.0.iter().all(|&c| c > 240), "centre should be the 0 dB peak");
+        // ... and the baked-in contours add non-grey (colored) pixels, unlike
+        // the purely greyscale live heatmap texture.
+        assert!(
+            decoded.pixels().any(|p| p.0[0] != p.0[1] || p.0[1] != p.0[2]),
+            "contours must be baked into the exported image"
+        );
+    }
+
+    /// A freshly started save must stay pending while its dialog is on screen
+    /// instead of resolving (or vanishing) on the first frame.
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn native_save_request_stays_pending_while_the_dialog_is_open() {
+        let ctx = egui::Context::default();
+        let mut request = SaveRequest::new("bsargeom_gaf.png", b"\x89PNG\r\n\x1a\n".to_vec());
+        for frame in 0..3 {
+            let mut outcome = None;
+            let _ = ctx.run_ui(egui::RawInput::default(), |ui| {
+                outcome = request.update(ui.ctx());
+            });
+            assert!(
+                outcome.is_none(),
+                "the save resolved on frame {frame} without the user choosing a path"
+            );
+        }
+    }
+
 }
-
-
-
-
