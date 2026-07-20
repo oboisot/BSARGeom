@@ -18,6 +18,7 @@ const MENU_RX_CAMERA_FOCUS_ACTIVE: egui::ImageSource<'_> = egui::include_image!(
 const MENU_GAF: egui::ImageSource<'_> = egui::include_image!("../../assets/menu-gaf-48.png");
 
 pub(crate) const RESET_ICON: egui::ImageSource<'_> = egui::include_image!("../../assets/menu-reset-48.png");
+pub(crate) const HELP_ICON: egui::ImageSource<'_> = egui::include_image!("../../assets/help-48.png");
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) const SAVE_ICON: egui::ImageSource<'_> = egui::include_image!("../../assets/save-48.png");
 #[cfg(target_arch = "wasm32")]

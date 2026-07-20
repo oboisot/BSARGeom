@@ -16,12 +16,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   i.e. about 5.4 x 5.3 inches. The desktop build opens a "save as" dialog
   (`egui-file-dialog`) and reports the written path; the web build hands the
   bytes to the browser as a download.
+- "?" button next to the GAF window's save button, listing the plot navigation
+  gestures (scroll to zoom, drag to pan, right-drag to zoom to a box,
+  double-click to reset the view) on hover. The web build additionally warns
+  that Ctrl+scroll zooms the browser page rather than the plot.
 - Reset button on the TRANSMITTER / RECEIVER SETTINGS title row, restoring every
   setting of that element (carrier, antenna orientation, beamwidth and system)
   to its defaults in one click.
 - `BSARGEOM_DEBUG_GAF=1` logs a line whenever the GAF plot's inputs or layout
   change between frames (and stays silent otherwise), to pin down flicker in the
   running application.
+
+### Changed
+
+- The GAF plot zooms on a plain mouse wheel scroll instead of Ctrl+scroll (which
+  previously panned it). In a browser Ctrl+scroll is the page-zoom gesture and
+  the canvas deliberately does not suppress it, so it used to scale the whole
+  page along with the plot; a plain scroll also matches how the 3D scene zooms.
+- The desktop "save as" dialog is centered on the window.
 
 ### Fixed
 

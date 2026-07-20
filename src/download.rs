@@ -31,7 +31,17 @@ impl SaveRequest {
         let mut dialog = egui_file_dialog::FileDialog::new()
             .add_file_filter_extensions("PNG image", vec!["png"])
             .default_file_filter("PNG image")
-            .default_file_name(file_name);
+            .default_file_name(file_name)
+            // Modal is `egui-file-dialog`'s own default; stated explicitly so the
+            // behaviour is visible here and survives an upstream default change.
+            // The dialog paints a screen-wide interactive overlay, which egui
+            // reports through `wants_pointer_input`, so `bevy_panorbit_camera`
+            // also stops orbiting the scene behind it.
+            .as_modal(true)
+            // Anchoring keeps the dialog centered even when the window is
+            // resized, at the cost of making it undraggable — the usual
+            // trade-off for a modal, and the reason `movable` is not set.
+            .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO);
         dialog.save_file();
         Self { dialog, bytes }
     }

@@ -19,7 +19,7 @@ use crate::{
     download::SaveRequest,
     raster::{draw_polyline_bgrx, fill_bgrx},
     textdraw::{draw_text_bgrx, text_width},
-    ui::menu::SAVE_ICON,
+    ui::menu::{HELP_ICON, SAVE_ICON},
 };
 
 /// Ground patch resolution (pixels per side) of the rendered GAF image.
@@ -46,6 +46,17 @@ const GAF_Y_AXIS_MIN_WIDTH: f32 = 40.0;
 const GAF_EXPORT_STROKE_PX: f32 = 1.6;
 /// File name used when saving/downloading the GAF image.
 const GAF_EXPORT_FILE_NAME: &str = "bsargeom_gaf.png";
+
+/// Plot navigation gestures, listed behind the "?" button next to "save image".
+///
+/// Scroll-to-zoom is ours (see [`zoom_on_plain_scroll`]); the rest are
+/// `egui_plot` defaults. The web variant warns about Ctrl+scroll: the canvas
+/// deliberately lets the browser handle its own shortcuts, so that gesture
+/// zooms the page rather than the plot.
+const PLOT_GESTURES_HELP: &str = "\
+Scroll        zoom
+Drag          pan
+Double-click  reset the view";
 
 /// Cached GAF texture and iso-dB contours, rebuilt only when the inputs
 /// change. The open/close state lives in [`crate::ui::MenuWidget`] (the menu
@@ -537,6 +548,36 @@ fn gaf_png_bytes(key: &GafKey) -> Option<Vec<u8>> {
     encode_png_with_dpi(&rgb, width, height)
 }
 
+/// Zooms the plot on a plain wheel scroll, replacing egui_plot's ctrl+scroll.
+///
+/// egui turns ctrl+scroll into a zoom gesture and leaves a plain scroll as a
+/// scroll, which egui_plot uses to pan. Requiring ctrl is a poor fit here: on
+/// the web the canvas does not call `preventDefault` on wheel events (see
+/// `prevent_default_event_handling` in `main.rs`, kept false so F5 and Ctrl+R
+/// still work), so ctrl+scroll reaches the browser as its page-zoom gesture and
+/// scales the whole page along with the plot. Zooming on a plain scroll also
+/// matches the orbit camera, which zooms the 3D scene the same way.
+///
+/// The factor reproduces egui's own ctrl+scroll formula, reading the user's
+/// configured speed, so the gesture keeps its familiar feel and honours the
+/// same setting.
+fn zoom_on_plain_scroll(plot_ui: &mut egui_plot::PlotUi<'_>) {
+    if !plot_ui.response().contains_pointer() {
+        return;
+    }
+    let scroll = plot_ui.ctx().input(|input| input.smooth_scroll_delta);
+    if scroll == egui::Vec2::ZERO {
+        return;
+    }
+    let speed = plot_ui
+        .ctx()
+        .options(|options| options.input_options.scroll_zoom_speed);
+    // Uniform on both axes: the plot has `data_aspect(1.0)`, so Easting and
+    // Northing must keep the same scale.
+    let factor = (speed * (scroll.x + scroll.y)).exp();
+    plot_ui.zoom_bounds_around_hovered(egui::Vec2::splat(factor));
+}
+
 /// Shows the GAF window while `open` is true, (re)building the cached texture
 /// only when the geometry changed. `open` is the menu's toggle flag and is set
 /// to `false` when the window's close button is clicked.
@@ -613,6 +654,15 @@ pub fn show_gaf_window(
                             )
                             .color(egui::Color32::from_rgb(200, 200, 200))
                             .monospace();
+                            // Sits right of the save button: in a right-to-left
+                            // layout, widgets are added from the right edge.
+                            ui.add(egui::Button::image(HELP_ICON).frame_when_inactive(false))
+                                .on_hover_text(
+                                    egui::RichText::new(PLOT_GESTURES_HELP)
+                                        .color(egui::Color32::from_rgb(200, 200, 200))
+                                        .monospace(),
+                                );
+                            // Save button
                             let saving = gaf_state.save_request.is_some();
                             if ui
                                 .add_enabled(!saving, egui::Button::image(SAVE_ICON).frame_when_inactive(false))
@@ -666,7 +716,13 @@ pub fn show_gaf_window(
                         // A minimum wider than any tick label we produce keeps
                         // the thickness constant and breaks the loop.
                         .y_axis_min_width(GAF_Y_AXIS_MIN_WIDTH)
+                        // Plain scroll zooms (see the closure below), so it must
+                        // not also pan the plot, which is what egui_plot does
+                        // with it by default.
+                        .allow_scroll(false)
+                        .allow_boxed_zoom(false)
                         .show(ui, |plot_ui| {
+                            zoom_on_plain_scroll(plot_ui);
                             let bounds = plot_ui.plot_bounds();
                             observed_bounds = Some((bounds.min(), bounds.max()));
                             plot_ui.image(egui_plot::PlotImage::new(
@@ -1030,6 +1086,109 @@ mod tests {
             "the plot bounds never settle, they cycle through {} states: {:#?}",
             seen.len(),
             seen
+        );
+    }
+
+    /// Drives the GAF window for `frames`, feeding `events` on the first one,
+    /// and returns the plot bounds observed on the last frame.
+    fn run_gaf_frames(
+        ctx: &egui::Context,
+        gaf_state: &mut GafState,
+        infos: &BsarInfos,
+        // Shared across calls: egui's input smoothing panics if time ever
+        // moves backwards, so the clock must keep running between runs.
+        clock: &mut usize,
+        frames: usize,
+        events: Vec<egui::Event>,
+    ) -> Option<([f64; 2], [f64; 2])> {
+        let mut open = true;
+        for frame in 0..frames {
+            *clock += 1;
+            let input = egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::pos2(0.0, 0.0),
+                    egui::vec2(1600.0, 1000.0),
+                )),
+                // Wheel input is smoothed over time, so the clock has to move.
+                time: Some(*clock as f64 / 60.0),
+                events: if frame == 0 { events.clone() } else { Vec::new() },
+                ..Default::default()
+            };
+            let _ = ctx.run_ui(input, |ui| {
+                show_gaf_window(ui.ctx(), &mut open, gaf_state, infos, 800.0e6, 10.0e9);
+            });
+        }
+        gaf_state.last_bounds
+    }
+
+    /// A plain wheel scroll must zoom the plot rather than pan it, so that no
+    /// ctrl modifier is needed (which a browser would read as page zoom).
+    #[test]
+    fn plain_scroll_zooms_the_gaf_plot_instead_of_panning_it() {
+        let infos = reported_flicker_infos();
+        let ctx = egui::Context::default();
+        let mut gaf_state = GafState::default();
+        let mut clock = 0;
+
+        // Settle the layout, with the pointer parked over the plot.
+        let pointer = egui::pos2(800.0, 520.0);
+        let settled = run_gaf_frames(
+            &ctx,
+            &mut gaf_state,
+            &infos,
+            &mut clock,
+            12,
+            vec![egui::Event::PointerMoved(pointer)],
+        )
+        .expect("the plot should report its bounds");
+
+        let zoomed = run_gaf_frames(
+            &ctx,
+            &mut gaf_state,
+            &infos,
+            &mut clock,
+            12,
+            vec![egui::Event::MouseWheel {
+                unit: egui::MouseWheelUnit::Point,
+                delta: egui::vec2(0.0, 40.0),
+                phase: egui::TouchPhase::Move,
+                modifiers: egui::Modifiers::NONE,
+            }],
+        )
+        .expect("the plot should report its bounds");
+
+        let width = |(min, max): ([f64; 2], [f64; 2])| max[0] - min[0];
+        let height = |(min, max): ([f64; 2], [f64; 2])| max[1] - min[1];
+        // Panning (egui_plot's default for a plain scroll) would move the
+        // bounds while preserving their size, so this discriminates.
+        assert!(
+            width(zoomed) < width(settled) && height(zoomed) < height(settled),
+            "a plain scroll left the visible range {:?} -> {:?}, which is a pan, not a zoom",
+            (width(settled), height(settled)),
+            (width(zoomed), height(zoomed)),
+        );
+
+        // Zooming turns egui_plot's auto-fit off, so the double-click reset
+        // advertised by the "?" help text is the way back to the full patch.
+        let click = |pressed| egui::Event::PointerButton {
+            pos: pointer,
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers: egui::Modifiers::NONE,
+        };
+        let reset = run_gaf_frames(
+            &ctx,
+            &mut gaf_state,
+            &infos,
+            &mut clock,
+            12,
+            vec![click(true), click(false), click(true), click(false)],
+        )
+        .expect("the plot should report its bounds");
+        assert_eq!(
+            (width(reset), height(reset)),
+            (width(settled), height(settled)),
+            "a double-click did not restore the initial bounds",
         );
     }
 
