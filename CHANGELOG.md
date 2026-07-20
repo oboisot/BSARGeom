@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-07-20
+
 ### Added
 
 - "Save image" button on the Generalized Ambiguity Function window, exporting a
@@ -124,6 +126,7 @@ First stable release.
 - Regression test suite covering the BSAR formulas, footprint geometry, contour
   extraction, geodesy conversions, and the monostatic update pipeline.
 
-[unreleased]: https://github.com/oboisot/BSARGeom/compare/1.1.0...HEAD
+[unreleased]: https://github.com/oboisot/BSARGeom/compare/1.2.0...HEAD
+[1.2.0]: https://github.com/oboisot/BSARGeom/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/oboisot/BSARGeom/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/oboisot/BSARGeom/releases/tag/1.0.0
