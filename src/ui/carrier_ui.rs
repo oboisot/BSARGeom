@@ -119,7 +119,7 @@ pub fn carrier_ui(
             ui.end_row();
 
             // ***** Carrier heading ***** //
-            let hover_text = egui::RichText::new("Sets the Carrier's heading angle (0 - 360°):\n    0° => North\n   90° => East\n  180° => South\n  270° => West\nnote: rotation along z-axis of Carrier's NED frame")
+            let hover_text = egui::RichText::new("Sets the Carrier's heading angle (0 - 360°):\n    0° => North\n   90° => East\n  180° => South\n  270° => West\nnote: rotation along yaw axis, i.e. z-axis of Carrier's NED frame")
                 .color(egui::Color32::from_rgb(200, 200, 200))
                 .monospace();
             ui.label("Heading: ").on_hover_text(hover_text.clone());
@@ -138,7 +138,7 @@ pub fn carrier_ui(
             ui.end_row();
 
             // ***** Carrier elevation ***** //
-            let hover_text = egui::RichText::new("Sets the Carrier's elevation angle (-90 - 90°):\n  -90° => nadir-looking\n    0° => horizontal-looking\n  +90° => sky-looking\nnote: rotation along y-axis of Carrier's NED frame")
+            let hover_text = egui::RichText::new("Sets the Carrier's elevation angle (-90 - 90°):\n  -90° => nadir-looking\n    0° => horizontal-looking\n  +90° => sky-looking\nnote: rotation along pitch axis, i.e. y-axis of Carrier's NED frame")
                 .color(egui::Color32::from_rgb(200, 200, 200))
                 .monospace();
             ui.label("Elevation: ").on_hover_text(hover_text.clone());
@@ -157,7 +157,7 @@ pub fn carrier_ui(
             ui.end_row();
 
             // ***** Carrier bank ***** //
-            let hover_text = egui::RichText::new("Sets the Carrier's bank angle (-90 - 90°):\n  -90° => left wing down\n    0° => horizontal wings\n  +90° => right wing down\nnote: rotation along x-axis of Carrier's NED frame")
+            let hover_text = egui::RichText::new("Sets the Carrier's bank angle (-90 - 90°):\n  -90° => left wing down\n    0° => horizontal wings\n  +90° => right wing down\nnote: rotation along roll axis, i.e. x-axis of Carrier's NED frame")
                 .color(egui::Color32::from_rgb(200, 200, 200))
                 .monospace();
             ui.label("Bank: ").on_hover_text(hover_text.clone());
@@ -200,11 +200,11 @@ pub fn carrier_ui(
         .striped(false)
         .spacing([20.0, 5.0])
         .show(ui, |ui| {
-            // ***** Antenna heading ***** //
-            let hover_text = egui::RichText::new("Sets the Antenna's heading angle (-180 - 180°):\n  -90° => left-looking\n    0° => forward-looking\n  +90° => right-looking\n ±180° => backward-looking\nnote: rotation along z-axis of Antenna's NED frame")
+            // ***** Antenna bearing ***** //
+            let hover_text = egui::RichText::new("Sets the Antenna's bearing angle (-180 - 180°):\n  -90° => left-looking\n    0° => forward-looking\n  +90° => right-looking\n ±180° => backward-looking\nnote: rotation along azimuth axis, i.e. z-axis of Antenna's NED frame")
                 .color(egui::Color32::from_rgb(200, 200, 200))
                 .monospace();
-            ui.label("Heading: ").on_hover_text(hover_text.clone());
+            ui.label("Bearing: ").on_hover_text(hover_text.clone());
             old_state = antenna_state.heading_deg;
             ui.add(
                 egui::Slider::new(&mut antenna_state.heading_deg, -180.0..=180.0)
@@ -221,10 +221,10 @@ pub fn carrier_ui(
             ui.end_row();
 
             // ***** Antenna elevation ***** //
-            let hover_text = egui::RichText::new("Sets the Antenna's elevation angle (-90 - 0°):\n  -90° => vertical-looking\n    0° => horizontal-looking\nnote: rotation along y-axis of Antenna's NED frame")
+            let hover_text = egui::RichText::new("Sets the Antenna's depression angle (-90 - 0°):\n  -90° => vertical-looking\n    0° => horizontal-looking\nnote: rotation along elevation axis, i.e. y-axis of Antenna's NED frame")
                 .color(egui::Color32::from_rgb(200, 200, 200))
                 .monospace();
-            ui.label("Elevation: ").on_hover_text(hover_text.clone());
+            ui.label("Depression: ").on_hover_text(hover_text.clone());
             old_state = antenna_state.elevation_deg;
             ui.add(
                 egui::Slider::new(&mut antenna_state.elevation_deg, -90.0..=0.0)
@@ -241,7 +241,7 @@ pub fn carrier_ui(
             ui.end_row();
 
             // ***** Antenna bank ***** //
-            let hover_text = egui::RichText::new("Sets the Antenna's bank angle (-90 - 90°)\nnote: rotation along x-axis of Antenna's NED frame")
+            let hover_text = egui::RichText::new("Sets the Antenna's bank angle (-90 - 90°)\nnote: rotation along pointing axis, i.e. x-axis of Antenna's NED frame")
                 .color(egui::Color32::from_rgb(200, 200, 200))
                 .monospace();
             ui.label("Bank: ").on_hover_text(hover_text.clone());
