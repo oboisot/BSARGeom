@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- BSARGeom application icon.
+     Derived from assets/menu-bist.svg (the bistatic two-triangle glyph): the two
+     triangle paths are reused verbatim, recolored and centered on a rounded-square
+     tile so the mark stays legible as a standalone app icon on light or dark
+     shells. Rasterized to the .ico / .png / .icns / favicon assets alongside it. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" version="1.1">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#33353a"/>
+      <stop offset="1" stop-color="#232427"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded-square background tile -->
+  <rect x="0" y="0" width="512" height="512" rx="96" ry="96" fill="url(#bg)"/>
+  <!-- Bistatic glyph (two triangles reused from menu-bist.svg), centered -->
+  <g transform="translate(70.9,70.0) scale(0.62)">
+    <path d="M 165,575 H 517 L 27,25 Z"
+          fill="#ececec" fill-opacity="1"/>
+    <path d="M 470,560 H 194 L 570,208 Z"
+          fill="#5a5a5e" fill-opacity="1"
+          stroke="#ececec" stroke-width="15" stroke-linejoin="miter"/>
+  </g>
+</svg>

@@ -1,0 +1,5 @@
+# `cargo xtask <cmd>` runs the packaging helper (see xtask/). `cargo xtask dist`
+# builds the release binary and produces the platform installer/archive under
+# target/dist.
+[alias]
+xtask = "run --package xtask --"

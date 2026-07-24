@@ -1,0 +1,82 @@
+#!/bin/bash
+
+USAGE="$(basename "$0") - Install script for the BSARGeom application.
+
+Usage: [sudo] ./$(basename "$0") [-h,--help]
+
+Options:
+  -h,--help  Print this help message and exit
+
+Examples:
+  $ ./$(basename "$0")        (for a user install in \$HOME)
+  $ sudo ./$(basename "$0")   (for a system-wide install)"
+
+CURRENT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+CURRENT_BIN=$CURRENT_DIR/bin
+
+# Install the binary, the desktop entry and the icon.
+#   $1 = bin dir (on PATH), $2 = data root (holds applications/ and icons/)
+function do_install {
+  local INSTALL_BIN=$1
+  local DATA_DIR=$2
+  local APP_DIR=$DATA_DIR/applications
+  local ICON_DIR=$DATA_DIR/icons/hicolor/256x256/apps
+
+  mkdir -p "$INSTALL_BIN" "$APP_DIR" "$ICON_DIR"
+
+  if [[ -f $INSTALL_BIN/bsargeom ]]; then
+    echo "A version of BSARGeom already exists !"
+    echo -n "-> Updating/Reinstalling BSARGeom in $INSTALL_BIN..."
+  else
+    echo -n "Installing BSARGeom in $INSTALL_BIN..."
+  fi
+
+  # Binary + uninstaller (preserve read-exec permissions).
+  chmod +rx "$CURRENT_BIN"/*
+  cp -p "$CURRENT_BIN"/* "$INSTALL_BIN"
+  # Icon (resolved by name from the hicolor theme via the .desktop Icon= key).
+  cp -p "$CURRENT_DIR/bsargeom.png" "$ICON_DIR/bsargeom.png"
+  # Desktop entry, with Exec pointed at the actual install path.
+  sed "s|^Exec=.*|Exec=$INSTALL_BIN/bsargeom|" \
+    "$CURRENT_DIR/bsargeom.desktop" > "$APP_DIR/bsargeom.desktop"
+  chmod +r "$APP_DIR/bsargeom.desktop"
+  echo " ...done"
+
+  # Best-effort menu/icon cache refresh (harmless if the tools are absent).
+  command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$APP_DIR" 2>/dev/null
+  command -v gtk-update-icon-cache   >/dev/null 2>&1 && gtk-update-icon-cache -f -t "$DATA_DIR/icons/hicolor" 2>/dev/null
+
+  echo ""
+  echo "Thank you for installing BSARGeom !"
+  echo "  |-> launch it from your desktop application menu, or run 'bsargeom'"
+  echo "  |-> run 'uninstall-bsargeom' to remove BSARGeom from this computer"
+  echo "  [infos] run this script with -h or --help for more installation options"
+  if [[ $INSTALL_BIN == "$HOME/.local/bin" ]]; then
+    echo "  [infos] if 'bsargeom' is not found in a terminal, add \$HOME/.local/bin to your PATH."
+  fi
+}
+
+if [[ $# -eq 1 && ($1 == "-h" || $1 == "--help") ]]; then
+  echo "$USAGE"
+  exit 0
+fi
+
+if [[ $(id -u) -eq 0 ]]; then # root
+  read -e -p "Install BSARGeom system wide ? [y/N] " choice
+  if [[ "$choice" == [Yy]* ]]; then
+    do_install /usr/local/bin /usr/local/share
+  else
+    echo "Installation aborted, exiting."
+    exit 1
+  fi
+else
+  read -e -p "Install BSARGeom in $HOME/.local/bin ? [y/N] " choice
+  if [[ "$choice" == [Yy]* ]]; then
+    do_install "$HOME/.local/bin" "$HOME/.local/share"
+  else
+    echo "Installation aborted, exiting."
+    exit 1
+  fi
+fi
+
+exit 0

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=BSARGeom
+GenericName=Bistatic SAR geometry visualizer
+Comment=Interactive 3D visualization of bistatic SAR acquisition geometries
+Exec=bsargeom
+Icon=bsargeom
+Terminal=false
+Categories=Science;Education;Physics;
+StartupWMClass=bsargeom
