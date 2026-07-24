@@ -1,2 +1,8 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Installer scripts must keep platform-correct line endings regardless of the
+# checkout host: a CR in a shell shebang breaks execution on Linux, so pin the
+# Linux install tree to LF and the Windows scripts to CRLF.
+install/linux/**   text eol=lf
+install/windows/** text eol=crlf

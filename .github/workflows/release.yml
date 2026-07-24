@@ -70,25 +70,18 @@ jobs:
           rustup default stable
           rustup target add ${{ matrix.target }}
 
-      - name: Build
-        run: cargo build --release --target ${{ matrix.target }}
-
-      - name: Package release asset
+      # `cargo xtask dist` builds the release binary and produces the platform
+      # installer(s) + archive under target/dist:
+      #   Windows -> zip archive + embedded .exe installer
+      #   Linux   -> makeself .run installer + tar.gz archive
+      #   macOS   -> BSARGeom.app bundle in a tar.gz (per-arch)
+      # XTASK_TARGET selects the build triple so the arm64 macOS runner can also
+      # cross-build the x86_64-apple-darwin bundle (see xtask::dist_target).
+      - name: Build installers (cargo xtask dist)
         shell: bash
-        run: |
-          mkdir -p target/dist
-          case "${{ matrix.target }}" in
-            *windows*)
-              # Bare renamed executable: nothing to unpack on Windows
-              cp target/${{ matrix.target }}/release/bsargeom.exe target/dist/bsargeom-${{ matrix.target }}.exe
-              ;;
-            *)
-              # tar.gz keeps the executable permission (a bare downloaded binary
-              # loses it and would need a manual `chmod +x`) and compresses the
-              # download
-              tar czf target/dist/bsargeom-${{ matrix.target }}.tar.gz -C target/${{ matrix.target }}/release bsargeom
-              ;;
-          esac
+        env:
+          XTASK_TARGET: ${{ matrix.target }}
+        run: cargo xtask dist
 
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v3

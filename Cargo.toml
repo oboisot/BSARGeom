@@ -1,7 +1,17 @@
 [package]
 name = "bsargeom"
-version = "1.2.0"
+version = "1.3.0"
 edition = "2024"
+
+# The app lives at the repo root; `xtask` (packaging) and `xtask-win-installer`
+# (the embedded Windows .exe installer) are helper crates. `default-members`
+# keeps a plain `cargo build`/`cargo run` building ONLY the app — the installer
+# crates build on demand via the `cargo xtask` alias (see .cargo/config.toml).
+# The app version above stays the single source of truth: xtask reads it from
+# this file (see xtask/build.rs), so there is nothing to keep in sync.
+[workspace]
+members = ["xtask", "xtask-win-installer"]
+default-members = ["."]
 
 [dependencies.bevy]
 version = "0.19"
@@ -49,8 +59,19 @@ png = "0.18"
 # 0.13 is the release built against egui 0.34; 0.12 pulls egui 0.33 and 0.14
 # pulls egui 0.35, either of which silently duplicates egui in the tree (the
 # same trap as the bevy_egui/egui_plot pins above).
+#
+# `winit` is used only to set the window icon at runtime (see src/main.rs). It is
+# pinned to the same 0.30 line bevy_winit links against so cargo unifies them to
+# a single crate — a mismatch would put two winit versions in the tree and the
+# `WINIT_WINDOWS` handle type would no longer match `winit::window::Icon`.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 egui-file-dialog = "0.13"
+winit = "0.30"
+
+# Windows-only: embed the application icon (and version info) into bsargeom.exe
+# so it shows in Explorer and the taskbar. `build.rs` no-ops on other targets.
+[build-dependencies]
+embed-resource = "3"
 
 # Web-only: the browser has no filesystem, so saving an image goes through a
 # Blob + download link (see src/download.rs). Native builds pull none of this.

@@ -1,0 +1,35 @@
+#!/bin/bash
+# Removes the BSARGeom binary, desktop entry and icon. Installed next to the
+# binary, so it derives the data dir from its own location:
+#   ~/.local/bin  -> ~/.local/share      (user install)
+#   /usr/local/bin -> /usr/local/share   (system install)
+UNINSTALL_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
+case "$UNINSTALL_DIR" in
+  "$HOME/.local/bin") DATA_DIR=$HOME/.local/share ;;
+  "/usr/local/bin")   DATA_DIR=/usr/local/share ;;
+  *)                  DATA_DIR=$(dirname "$UNINSTALL_DIR")/share ;;
+esac
+
+if [[ $UNINSTALL_DIR == "/usr/local/bin" && $(id -u) -ne 0 ]]; then
+  echo "uninstall-bsargeom: error: root privileges are required to remove a system-wide install."
+  exit 1
+fi
+
+read -e -p "Remove BSARGeom and all its components ? [y/N] " choice
+if [[ "$choice" != [Yy]* ]]; then
+  echo "Uninstall aborted, exiting."
+  exit 0
+fi
+
+echo -n "Removing BSARGeom files..."
+rm -f "$UNINSTALL_DIR/bsargeom" "$UNINSTALL_DIR/uninstall-bsargeom"
+rm -f "$DATA_DIR/applications/bsargeom.desktop"
+rm -f "$DATA_DIR/icons/hicolor/256x256/apps/bsargeom.png"
+echo " ...done"
+
+command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$DATA_DIR/applications" 2>/dev/null
+command -v gtk-update-icon-cache   >/dev/null 2>&1 && gtk-update-icon-cache -f -t "$DATA_DIR/icons/hicolor" 2>/dev/null
+
+echo "BSARGeom has been successfully removed."
+exit 0

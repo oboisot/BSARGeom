@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-07-24
+
+### Added
+
+- `cargo xtask dist` packaging command that builds the release binary and writes
+  platform installers plus plain archives to `target/dist`: on Windows a
+  self-contained `.exe` installer (installs to `%LOCALAPPDATA%\BSARGeom` with
+  Start-Menu and Desktop shortcuts) and a `.zip`; on Linux a `makeself`
+  self-extracting `.run` installer (installs `bsargeom` to `~/.local/bin` or,
+  with `sudo`, `/usr/local/bin`, plus a desktop-menu entry) and a `.tar.gz`; on
+  macOS a `BSARGeom.app` bundle in a `.tar.gz`. The release workflow now produces
+  these for every target. Modeled on the RustSAR packaging setup.
+- Application icon (derived from the bistatic menu glyph on a rounded tile)
+  applied to every build: embedded into `bsargeom.exe` so it shows in Explorer
+  and the taskbar (via a build script), set on the native window at runtime
+  through winit, carried by the macOS `.app` bundle, installed alongside the
+  Linux desktop entry, and used as the web page favicon.
+
+### Changed
+
+- Renamed the antenna-orientation sliders on the Transmitter / Receiver panels
+  for convention-correct naming: "Heading" is now "Bearing" and "Elevation" is
+  now "Depression". The hover tooltips also name the rotation axis of each angle
+  — the carrier's heading / elevation / bank as the yaw / pitch / roll axes of
+  its NED frame, and the antenna's bearing / depression / bank as the azimuth /
+  elevation / pointing axes of its NED frame.
+
 ## [1.2.0] - 2026-07-20
 
 ### Added
@@ -126,7 +153,8 @@ First stable release.
 - Regression test suite covering the BSAR formulas, footprint geometry, contour
   extraction, geodesy conversions, and the monostatic update pipeline.
 
-[unreleased]: https://github.com/oboisot/BSARGeom/compare/1.2.0...HEAD
+[unreleased]: https://github.com/oboisot/BSARGeom/compare/1.3.0...HEAD
+[1.3.0]: https://github.com/oboisot/BSARGeom/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/oboisot/BSARGeom/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/oboisot/BSARGeom/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/oboisot/BSARGeom/releases/tag/1.0.0

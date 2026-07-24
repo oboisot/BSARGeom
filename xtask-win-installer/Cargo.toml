@@ -1,0 +1,20 @@
+[package]
+name = "xtask-win-installer"
+version = "0.1.0"
+publish = false
+edition = "2024"
+description = """Support crate for `cargo xtask dist` on Windows: embeds the
+staged application folder (../target/tmp/BSARGeom, produced by xtask/src/windows.rs)
+via rust-embed and, when run, unpacks it to a temp dir and launches
+InstallOrUninstall.bat. If that source path changes, update src/main.rs too."""
+
+[[bin]]
+name = "xtask-win-installer"
+path = "src/main.rs"
+
+[build-dependencies]
+embed-resource = "3"
+
+[dependencies]
+rust-embed = { version = "8", features = ["compression"] }
+tempfile = "3"
