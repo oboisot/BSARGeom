@@ -68,17 +68,17 @@ png = "0.18"
 egui-file-dialog = "0.13"
 winit = "0.30"
 
-# Windows-only: embed the application icon (and version info) into bsargeom.exe
-# so it shows in Explorer and the taskbar. `build.rs` no-ops on other targets.
-[build-dependencies]
-embed-resource = "3"
-
 # Web-only: the browser has no filesystem, so saving an image goes through a
 # Blob + download link (see src/download.rs). Native builds pull none of this.
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
 js-sys = "0.3"
 web-sys = { version = "0.3", features = ["Blob", "BlobPropertyBag", "Url", "Document", "Window", "HtmlAnchorElement", "Element", "HtmlElement"] }
+
+# Windows-only: embed the application icon (and version info) into bsargeom.exe
+# so it shows in Explorer and the taskbar. `build.rs` no-ops on other targets.
+[build-dependencies]
+embed-resource = "3"
 
 # Size optimization (see: https://github.com/johnthagen/min-sized-rust)
 [profile.release]
