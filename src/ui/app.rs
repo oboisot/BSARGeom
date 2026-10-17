@@ -31,10 +31,10 @@ impl Plugin for AppPlugin {
 /// (same unit and origin as [`Window::cursor_position`]).
 ///
 /// Updated every frame by [`ui_system`] from the actual panel rectangles and
-/// read by the camera plugin to keep [`bevy_panorbit_camera`] from reacting to
-/// drags/scrolls performed over the panels (egui cannot report panels shown on
-/// the background layer via `Context::is_pointer_over_area`, so the camera
-/// cannot rely on egui's own focus signals for them).
+/// read by the camera plugin to ignore drags/scrolls that start over the
+/// panels (egui cannot report panels shown on the background layer via
+/// `Context::is_pointer_over_egui`, so the camera cannot rely on egui's own
+/// input signals for them).
 #[derive(Resource)]
 pub struct SidePanelRects {
     /// Right edge of the left panel block (menu + Transmitter panel)

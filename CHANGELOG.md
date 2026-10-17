@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- A camera drag started in the 3D view now keeps control of the camera while
+  the pointer crosses a side panel, instead of pausing until the pointer is
+  back over the scene.
+
+### Fixed
+
+- A drag started on an empty area of a side panel no longer orbits the camera
+  once the pointer leaves the panel, and touch gestures that start on a side
+  panel no longer move the camera at all.
+
 ## [1.3.0] - 2026-07-24
 
 ### Added

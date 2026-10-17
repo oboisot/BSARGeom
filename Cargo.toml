@@ -40,11 +40,13 @@ features = [
 ]
 
 [dependencies]
-# note: bevy_egui and egui_extras versions are tied to the bevy_egui version that
-# bevy_panorbit_camera's "bevy_egui" feature links against. A mismatch (e.g. app on
-# bevy_egui 0.41 while bevy_panorbit_camera 0.35 uses 0.40) silently duplicates the
-# crate in the dependency tree and breaks camera input blocking over egui areas.
-bevy_panorbit_camera = { version = "0.35", features = ["bevy_egui"] }
+# The app blocks camera input over the UI itself (see src/camera.rs), so
+# bevy_panorbit_camera's "bevy_egui" feature is not used: it would pin bevy_egui
+# to the release the camera crate links against.
+bevy_panorbit_camera = "0.35"
+# note: egui_extras is versioned in lockstep with egui — 0.34 matches the egui
+# 0.34 that bevy_egui 0.40 links against. A mismatch puts a second egui in the
+# dependency tree (the same trap as the egui_plot/egui-file-dialog pins below).
 bevy_egui = "0.40"
 egui_extras = { version = "0.34", features = ["image"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
