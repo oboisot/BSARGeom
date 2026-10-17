@@ -540,7 +540,7 @@ fn gaf_png_bytes(key: &GafKey) -> Option<Vec<u8>> {
     }
 
     let mut rgb = vec![0u8; width * height * 3];
-    for (i, pixel) in bgrx.chunks_exact(4).enumerate() {
+    for (i, pixel) in bgrx.as_chunks::<4>().0.iter().enumerate() {
         rgb[i * 3] = pixel[2]; // R
         rgb[i * 3 + 1] = pixel[1]; // G
         rgb[i * 3 + 2] = pixel[0]; // B
