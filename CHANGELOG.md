@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   windows now take 0.2 s to slide or fade in and out instead of 0.1 s, and with
   a mouse the Generalized Ambiguity Function window is moved by its title bar
   only (on a touch screen it can still be dragged from anywhere).
+- Updated to Bevy 0.20. The 3D view now uses Bevy's built-in pan-orbit camera
+  controller instead of the `bevy_panorbit_camera` crate, with the same
+  controls: left drag orbits, right drag pans, the mouse wheel zooms, and the
+  menu's focus buttons pin the view on the ground origin or a carrier.
 
 ### Fixed
 
