@@ -12,12 +12,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A camera drag started in the 3D view now keeps control of the camera while
   the pointer crosses a side panel, instead of pausing until the pointer is
   back over the scene.
+- Updated the user-interface toolkit to egui 0.36 (from 0.34). Side panels and
+  windows now take 0.2 s to slide or fade in and out instead of 0.1 s, and with
+  a mouse the Generalized Ambiguity Function window is moved by its title bar
+  only (on a touch screen it can still be dragged from anywhere).
 
 ### Fixed
 
 - A drag started on an empty area of a side panel no longer orbits the camera
   once the pointer leaves the panel, and touch gestures that start on a side
   panel no longer move the camera at all.
+- The Tx and Rx Infos windows now slide along with the side panels when a panel
+  is opened or closed, instead of jumping to their final position while the
+  panel is still moving.
 
 ## [1.3.0] - 2026-07-24
 
