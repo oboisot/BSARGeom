@@ -4,7 +4,6 @@
 #![allow(clippy::type_complexity, clippy::too_many_arguments)]
 
 use bevy::prelude::*;
-use bevy_panorbit_camera::PanOrbitCameraPlugin;
 
 pub mod bsar;
 pub mod camera;
@@ -42,8 +41,7 @@ fn main() {
                     ..default()
                 }),
                 ..default()
-            }))           
-        .add_plugins(PanOrbitCameraPlugin)
+            }))
         .add_plugins(AppPlugin)
         .add_plugins(ScenePlugin);
 
@@ -58,7 +56,7 @@ fn main() {
 
 /// Applies the embedded application icon to the primary winit window.
 ///
-/// `bevy_winit` 0.19 keeps its windows in a main-thread `WINIT_WINDOWS`
+/// `bevy_winit` (since 0.19) keeps its windows in a main-thread `WINIT_WINDOWS`
 /// thread-local (no longer a `NonSend` resource), so the system must run on the
 /// main thread — a `NonSend` parameter forces that even with the multithreaded
 /// executor. It runs each `Update` until it finds the window (created during the

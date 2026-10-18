@@ -540,7 +540,7 @@ fn gaf_png_bytes(key: &GafKey) -> Option<Vec<u8>> {
     }
 
     let mut rgb = vec![0u8; width * height * 3];
-    for (i, pixel) in bgrx.chunks_exact(4).enumerate() {
+    for (i, pixel) in bgrx.as_chunks::<4>().0.iter().enumerate() {
         rgb[i * 3] = pixel[2]; // R
         rgb[i * 3 + 1] = pixel[1]; // G
         rgb[i * 3 + 2] = pixel[0]; // B
@@ -792,6 +792,20 @@ mod tests {
         }
     }
 
+    /// Runs one egui pass headlessly. Nothing renders these frames, so the
+    /// texture uploads they request (font atlas, GAF heatmap) are discarded
+    /// explicitly: egui (since 0.36) `debug_assert!`s that no texture delta is
+    /// dropped unapplied.
+    fn run_headless(
+        ctx: &egui::Context,
+        input: egui::RawInput,
+        run_ui: impl FnMut(&mut egui::Ui),
+    ) -> egui::FullOutput {
+        let mut output = ctx.run_ui(input, run_ui);
+        output.textures_delta.clear();
+        output
+    }
+
     #[test]
     fn gaf_is_zero_db_at_origin() {
         let key = reference_key();
@@ -926,6 +940,10 @@ mod tests {
         );
 
         let ctx = egui::Context::default();
+        // Let fonts, the window fade-in and the first layout settle. The fade-in
+        // alone lasts `animation_time` (0.2 s since egui 0.35), and a headless
+        // frame without a clock advances egui's time by 1/60 s.
+        let settle_frames = (ctx.global_style().animation_time * 60.0).ceil() as usize + 8;
         let mut gaf_state = GafState::default();
         let mut frame = || {
             let mut open = true;
@@ -936,13 +954,12 @@ mod tests {
                 )),
                 ..Default::default()
             };
-            let output = ctx.run_ui(input, |ui| {
+            let output = run_headless(&ctx, input, |ui| {
                 show_gaf_window(ui.ctx(), &mut open, &mut gaf_state, &infos, 300.0e6, 9.65e9);
             });
             format!("{:?}", output.shapes)
         };
-        // Let fonts, window animation and the first layout settle
-        for _ in 0..8 {
+        for _ in 0..settle_frames {
             frame();
         }
         let settled = frame();
@@ -1024,7 +1041,7 @@ mod tests {
         let mut request = SaveRequest::new("bsargeom_gaf.png", b"\x89PNG\r\n\x1a\n".to_vec());
         for frame in 0..3 {
             let mut outcome = None;
-            let _ = ctx.run_ui(egui::RawInput::default(), |ui| {
+            let _ = run_headless(&ctx, egui::RawInput::default(), |ui| {
                 outcome = request.update(ui.ctx());
             });
             assert!(
@@ -1072,7 +1089,7 @@ mod tests {
                 )),
                 ..Default::default()
             };
-            let _ = ctx.run_ui(input, |ui| {
+            let _ = run_headless(&ctx, input, |ui| {
                 show_gaf_window(ui.ctx(), &mut open, &mut gaf_state, &infos, 800.0e6, 10.0e9);
             });
             if frame >= 8 {
@@ -1114,7 +1131,7 @@ mod tests {
                 events: if frame == 0 { events.clone() } else { Vec::new() },
                 ..Default::default()
             };
-            let _ = ctx.run_ui(input, |ui| {
+            let _ = run_headless(ctx, input, |ui| {
                 show_gaf_window(ui.ctx(), &mut open, gaf_state, infos, 800.0e6, 10.0e9);
             });
         }

@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- A camera drag started in the 3D view now keeps control of the camera while
+  the pointer crosses a side panel, instead of pausing until the pointer is
+  back over the scene.
+- Updated the user-interface toolkit to egui 0.36 (from 0.34). Side panels and
+  windows now take 0.2 s to slide or fade in and out instead of 0.1 s, and with
+  a mouse the Generalized Ambiguity Function window is moved by its title bar
+  only (on a touch screen it can still be dragged from anywhere).
+- Updated to Bevy 0.20. The 3D view now uses Bevy's built-in pan-orbit camera
+  controller instead of the `bevy_panorbit_camera` crate, with the same
+  controls: left drag or one finger orbits, right drag or two fingers pan, the
+  mouse wheel or a pinch zooms, and the menu's focus buttons pin the view on
+  the ground origin or a carrier.
+- Smaller builds: the desktop binary is about 10% smaller (-5.4 MiB) and the
+  web build's WebAssembly module about 8% smaller (-1.8 MiB), as `bevy_egui` is
+  now compiled with only the features the app uses (no Bevy UI renderer,
+  picking integration or `webbrowser` crate).
+- The Linux `.run` installer is now built with makeself 2.7.1 (from 2.5.0).
+
+### Fixed
+
+- A drag started on an empty area of a side panel no longer orbits the camera
+  once the pointer leaves the panel, and touch gestures that start on a side
+  panel no longer move the camera at all.
+- The Tx and Rx Infos windows now slide along with the side panels when a panel
+  is opened or closed, instead of jumping to their final position while the
+  panel is still moving.
+
 ## [1.3.0] - 2026-07-24
 
 ### Added

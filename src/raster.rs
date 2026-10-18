@@ -9,7 +9,7 @@
 
 /// Fills the whole BGRX buffer with a single (R, G, B) color.
 pub fn fill_bgrx(bytes: &mut [u8], color: (u8, u8, u8)) {
-    for pixel in bytes.chunks_exact_mut(4) {
+    for pixel in bytes.as_chunks_mut::<4>().0 {
         pixel[0] = color.2; // B
         pixel[1] = color.1; // G
         pixel[2] = color.0; // R
@@ -143,7 +143,9 @@ mod tests {
         let mut bytes = vec![0u8; W * H * 4];
         fill_bgrx(&mut bytes, (128, 129, 130));
         assert!(bytes
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .all(|px| px[0] == 130 && px[1] == 129 && px[2] == 128));
     }
 
