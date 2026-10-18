@@ -2076,7 +2076,7 @@ dependencies = [
 
 [[package]]
 name = "bsargeom"
-version = "1.3.0"
+version = "1.4.0"
 dependencies = [
  "ab_glyph",
  "bevy",

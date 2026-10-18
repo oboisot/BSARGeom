@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-18
+
 ### Changed
 
 - A camera drag started in the 3D view now keeps control of the camera while
@@ -182,7 +184,8 @@ First stable release.
 - Regression test suite covering the BSAR formulas, footprint geometry, contour
   extraction, geodesy conversions, and the monostatic update pipeline.
 
-[unreleased]: https://github.com/oboisot/BSARGeom/compare/1.3.0...HEAD
+[unreleased]: https://github.com/oboisot/BSARGeom/compare/1.4.0...HEAD
+[1.4.0]: https://github.com/oboisot/BSARGeom/compare/1.3.0...1.4.0
 [1.3.0]: https://github.com/oboisot/BSARGeom/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/oboisot/BSARGeom/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/oboisot/BSARGeom/compare/1.0.0...1.1.0
