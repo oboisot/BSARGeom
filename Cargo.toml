@@ -46,11 +46,21 @@ features = [
 ]
 
 [dependencies]
+# 0.43.1 at least: 0.43.0's egui shader is broken on the web (Wasm).
+# Only the features the app uses: rendering, egui's bundled fonts and the system
+# clipboard (copy/paste in text fields). The defaults would also build bevy_ui
+# and its renderer, the bevy_picking integration and `webbrowser` (to open
+# links), none of which the app uses (saving measured on this crate: -5.4 MiB,
+# -9.7% of the release binary; -1.8 MiB, -8.5% of the web build's wasm after
+# wasm-opt).
+bevy_egui = { version = "0.43.1", default-features = false, features = [
+    "render",
+    "default_fonts",
+    "manage_clipboard",
+] }
 # note: egui_extras is versioned in lockstep with egui — 0.36 matches the egui
 # 0.36 that bevy_egui 0.43 links against. A mismatch puts a second egui in the
 # dependency tree (the same trap as the egui_plot/egui-file-dialog pins below).
-# 0.43.1 at least: 0.43.0's egui shader is broken on the web (Wasm).
-bevy_egui = "0.43.1"
 egui_extras = { version = "0.36", features = ["image"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
 ab_glyph = "0.2"

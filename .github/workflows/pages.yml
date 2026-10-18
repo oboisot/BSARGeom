@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Rust toolchain
         run: |
@@ -39,7 +39,7 @@ jobs:
       - name: Install bevy CLI (pinned)
         # The bevy CLI is git-only (the crates.io `bevy_cli` name is a
         # placeholder); pin the revision for reproducible deployments.
-        run: cargo install --git https://github.com/TheBevyFlock/bevy_cli --rev 8825c5fab8eeaf50a2e3b3d5ed5d1556627d7836 --locked bevy_cli
+        run: cargo install --git https://github.com/TheBevyFlock/bevy_cli --rev a0326746c766ad615ef803a7f766504583e653ff --locked bevy_cli
 
       - name: Build and bundle web release
         # --yes lets the CLI install the matching wasm-bindgen non-interactively

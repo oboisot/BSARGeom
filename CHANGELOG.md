@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   controls: left drag or one finger orbits, right drag or two fingers pan, the
   mouse wheel or a pinch zooms, and the menu's focus buttons pin the view on
   the ground origin or a carrier.
+- Smaller builds: the desktop binary is about 10% smaller (-5.4 MiB) and the
+  web build's WebAssembly module about 8% smaller (-1.8 MiB), as `bevy_egui` is
+  now compiled with only the features the app uses (no Bevy UI renderer,
+  picking integration or `webbrowser` crate).
+- The Linux `.run` installer is now built with makeself 2.7.1 (from 2.5.0).
 
 ### Fixed
 
