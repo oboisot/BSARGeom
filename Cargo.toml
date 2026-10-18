@@ -26,7 +26,8 @@ default-features = false
 # (cost measured on this crate: +1.6 MiB, +3.1% of the release binary).
 # `pan_orbit_camera` is Bevy's built-in camera controller. It compiles
 # `bevy_picking` for its system ordering, but the app adds no picking plugin:
-# src/camera feeds the controller mouse input directly.
+# src/camera feeds the controller mouse and touch input directly (`touch`
+# provides the finger state it reads).
 features = [
     "bevy_pbr",
     "bevy_render",
@@ -41,6 +42,7 @@ features = [
     "x11",
     "wayland",
     "pan_orbit_camera",
+    "touch",
 ]
 
 [dependencies]

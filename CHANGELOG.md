@@ -18,8 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   only (on a touch screen it can still be dragged from anywhere).
 - Updated to Bevy 0.20. The 3D view now uses Bevy's built-in pan-orbit camera
   controller instead of the `bevy_panorbit_camera` crate, with the same
-  controls: left drag orbits, right drag pans, the mouse wheel zooms, and the
-  menu's focus buttons pin the view on the ground origin or a carrier.
+  controls: left drag or one finger orbits, right drag or two fingers pan, the
+  mouse wheel or a pinch zooms, and the menu's focus buttons pin the view on
+  the ground origin or a carrier.
 
 ### Fixed
 

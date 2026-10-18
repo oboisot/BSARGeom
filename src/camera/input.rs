@@ -1,7 +1,8 @@
-//! Mouse input for the camera. Bevy's pan-orbit controller ships without an
-//! input plugin: this module turns the mouse into controller motions — left
-//! drag orbits, right drag pans, the wheel zooms — and keeps gestures that
-//! start over the UI away from the camera.
+//! Mouse and touch input for the camera. Bevy's pan-orbit controller ships
+//! without an input plugin: this module turns the mouse and fingers into
+//! controller motions — left drag or one finger orbits, right drag or two
+//! fingers pan, the wheel or a pinch zooms — and keeps gestures that start
+//! over the UI away from the camera.
 
 use bevy::{
     camera_controller::pan_orbit_camera::{prelude::PanOrbitCamera, SyncCameraPosition},
@@ -21,6 +22,10 @@ use crate::ui::SidePanelRects;
 /// distance per unit, so this is the zoom speed (Bevy's examples use 150).
 const ZOOM_PER_WHEEL_LINE: f32 = 150.0;
 
+/// Smallest distance between two fingers used to measure a pinch, in pixels:
+/// keeps fingers landing on top of each other from zooming wildly.
+const MIN_PINCH_SPAN: f32 = 10.0;
+
 pub(super) struct CameraInputPlugin;
 
 impl Plugin for CameraInputPlugin {
@@ -33,9 +38,10 @@ impl Plugin for CameraInputPlugin {
 }
 
 /// The camera gesture in progress.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 enum Gesture {
-    /// Nothing in progress: a button press or a wheel scroll starts a gesture.
+    /// Nothing in progress: a button press, a wheel scroll or a finger landing
+    /// starts a gesture.
     #[default]
     Idle,
     /// Orbiting (left button) or panning (right button) until that button is
@@ -43,8 +49,16 @@ enum Gesture {
     Drag(MouseButton),
     /// Zooming with the wheel, until the zoom comes to rest.
     Zoom,
-    /// A press that landed on the UI: the camera ignores everything until
-    /// every button is released.
+    /// A first finger landed on the previous frame, at this position. Unlike a
+    /// mouse, a finger does not hover the UI before landing on it, so the
+    /// gesture starts (or is ignored) only once egui has reported on that
+    /// frame.
+    TouchPending(Vec2),
+    /// A touch gesture with this many fingers: one orbits, two or more pan
+    /// (with a free focus) and pinch-zoom.
+    Touch(usize),
+    /// A gesture that started on the UI: the camera ignores everything until
+    /// every button and finger is released.
     Ignored,
 }
 
@@ -55,10 +69,27 @@ struct Frame<'a> {
     motion: Vec2,
     /// Zoom input from the mouse wheel this frame.
     wheel: f32,
-    /// Whether the pointer is over the UI, where a gesture must not start.
+    touch: TouchFrame,
+    /// Whether the pointer (the landing finger, for a pending touch gesture)
+    /// is over the UI, where a gesture must not start.
     over_ui: bool,
     /// Whether the controller's wheel zoom has come to rest.
     zoom_settled: bool,
+    /// Whether the controller accepts pans (refused while a focus is pinned).
+    pan_enabled: bool,
+}
+
+/// One frame of touch input.
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+struct TouchFrame {
+    /// Fingers on the screen.
+    fingers: usize,
+    /// Where the first finger landed, on the frame it did (none was down before).
+    landed_at: Option<Vec2>,
+    /// Mean motion of the fingers since the previous frame.
+    motion: Vec2,
+    /// Zoom input from pinching (spreading the fingers zooms in).
+    pinch: f32,
 }
 
 /// What to tell the camera controller.
@@ -77,64 +108,152 @@ enum ControllerCommand {
 /// Advances the gesture by one frame and lists what the controller must do.
 fn step(gesture: Gesture, frame: &Frame) -> (Gesture, Vec<ControllerCommand>) {
     use ControllerCommand::*;
-    let input = Input { motion: frame.motion, zoom: frame.wheel };
+    let mouse_input = Input { motion: frame.motion, zoom: frame.wheel };
+    let touch = &frame.touch;
     let drag_press = [MouseButton::Left, MouseButton::Right]
         .into_iter()
         .find(|&button| frame.buttons.just_pressed(button));
-    let any_button_held = frame.buttons.get_pressed().next().is_some();
-    match (gesture, drag_press) {
-        // A press starts a drag, or is ignored when it lands on the UI. A wheel
-        // zoom in progress ends either way (starting a motion replaces it).
-        (Gesture::Idle | Gesture::Zoom, Some(button)) => {
-            if frame.over_ui {
-                let end_zoom = (gesture == Gesture::Zoom).then_some(End);
-                (Gesture::Ignored, end_zoom.into_iter().collect())
-            } else {
-                let start = if button == MouseButton::Left { StartOrbit } else { StartPan };
-                (Gesture::Drag(button), vec![start, input])
-            }
-        }
-        (Gesture::Idle, None) if frame.wheel != 0.0 && !frame.over_ui => {
-            (Gesture::Zoom, vec![StartZoom, input])
-        }
-        (Gesture::Idle, None) => (Gesture::Idle, Vec::new()),
-        (Gesture::Zoom, None) => {
-            // Scrolling over the UI scrolls the UI, not the scene behind it
-            if (frame.wheel != 0.0 && frame.over_ui) || (frame.wheel == 0.0 && frame.zoom_settled) {
+    let any_held = frame.buttons.get_pressed().next().is_some() || touch.fingers > 0;
+    match gesture {
+        Gesture::Idle | Gesture::Zoom => {
+            // Starting another gesture ends a wheel zoom in progress (starting
+            // a motion replaces it anyway)
+            let end_zoom = if gesture == Gesture::Zoom { vec![End] } else { Vec::new() };
+            if let Some(landed_at) = touch.landed_at {
+                (Gesture::TouchPending(landed_at), end_zoom)
+            } else if let Some(button) = drag_press {
+                if frame.over_ui {
+                    (Gesture::Ignored, end_zoom)
+                } else {
+                    let start = if button == MouseButton::Left { StartOrbit } else { StartPan };
+                    (Gesture::Drag(button), vec![start, mouse_input])
+                }
+            } else if gesture == Gesture::Idle {
+                if frame.wheel != 0.0 && !frame.over_ui {
+                    (Gesture::Zoom, vec![StartZoom, mouse_input])
+                } else {
+                    (Gesture::Idle, Vec::new())
+                }
+            } else if (frame.wheel != 0.0 && frame.over_ui)
+                || (frame.wheel == 0.0 && frame.zoom_settled)
+            {
+                // Scrolling over the UI scrolls the UI, not the scene behind it
                 (Gesture::Idle, vec![End])
             } else {
-                (Gesture::Zoom, vec![input])
+                (Gesture::Zoom, vec![mouse_input])
             }
         }
-        (Gesture::Drag(button), _) if frame.buttons.pressed(button) => {
-            (Gesture::Drag(button), vec![input])
+        Gesture::Drag(button) if frame.buttons.pressed(button) => {
+            (Gesture::Drag(button), vec![mouse_input])
         }
         // The drag button was released: wait for any other held button too
-        (Gesture::Drag(_), _) if any_button_held => (Gesture::Ignored, vec![End]),
-        (Gesture::Drag(_), _) => (Gesture::Idle, vec![End]),
-        (Gesture::Ignored, _) if any_button_held => (Gesture::Ignored, Vec::new()),
-        (Gesture::Ignored, _) => (Gesture::Idle, Vec::new()),
+        Gesture::Drag(_) if any_held => (Gesture::Ignored, vec![End]),
+        Gesture::Drag(_) => (Gesture::Idle, vec![End]),
+        // A tap: the finger is already up
+        Gesture::TouchPending(_) if touch.fingers == 0 => (Gesture::Idle, Vec::new()),
+        Gesture::TouchPending(_) if frame.over_ui => (Gesture::Ignored, Vec::new()),
+        Gesture::TouchPending(_) => start_touch_motion(frame),
+        Gesture::Touch(_) if touch.fingers == 0 => (Gesture::Idle, vec![End]),
+        // Each finger count drives its own motion
+        Gesture::Touch(fingers) if fingers != touch.fingers => start_touch_motion(frame),
+        Gesture::Touch(fingers) => (
+            Gesture::Touch(fingers),
+            vec![Input { motion: touch.motion, zoom: touch.pinch }],
+        ),
+        Gesture::Ignored if any_held => (Gesture::Ignored, Vec::new()),
+        Gesture::Ignored => (Gesture::Idle, Vec::new()),
     }
 }
 
-/// Drives the camera controller from the mouse.
+/// Starts the motion of the fingers on the screen: one finger orbits, two or
+/// more pan and pinch-zoom — or only pinch-zoom while a focus is pinned.
+fn start_touch_motion(frame: &Frame) -> (Gesture, Vec<ControllerCommand>) {
+    use ControllerCommand::*;
+    let touch = &frame.touch;
+    let start = match touch.fingers {
+        1 => StartOrbit,
+        _ if frame.pan_enabled => StartPan,
+        _ => StartZoom,
+    };
+    (
+        Gesture::Touch(touch.fingers),
+        vec![start, Input { motion: touch.motion, zoom: touch.pinch }],
+    )
+}
+
+/// Touch input this frame, from the fingers on the screen (id and position,
+/// sorted by id) on this frame and on the previous one.
+///
+/// Positions are compared frame to frame here rather than taken from
+/// `Touch::delta`, which only refreshes on frames with touch events: a finger
+/// held still would keep reporting its last motion.
+fn touch_frame(fingers: &[(u64, Vec2)], last: &[(u64, Vec2)], window_height: f32) -> TouchFrame {
+    let last_position = |id: u64| {
+        last.iter()
+            .find(|&&(last_id, _)| last_id == id)
+            .map(|&(_, position)| position)
+    };
+    // A finger that just landed has not moved yet
+    let motion = if fingers.is_empty() {
+        Vec2::ZERO
+    } else {
+        fingers
+            .iter()
+            .map(|&(id, position)| last_position(id).map_or(Vec2::ZERO, |last| position - last))
+            .sum::<Vec2>()
+            / fingers.len() as f32
+    };
+    // Pinching only while the same fingers stay down: one landing or lifting
+    // would make the span between the first two jump
+    let same_fingers = fingers.len() == last.len()
+        && fingers.iter().zip(last).all(|(finger, last)| finger.0 == last.0);
+    let pinch = match (fingers, last) {
+        ([a, b, ..], [last_a, last_b, ..]) if same_fingers => pinch_zoom(
+            last_a.1.distance(last_b.1),
+            a.1.distance(b.1),
+            window_height,
+        ),
+        _ => 0.0,
+    };
+    TouchFrame {
+        fingers: fingers.len(),
+        landed_at: last.is_empty().then(|| fingers.first().map(|&(_, p)| p)).flatten(),
+        motion,
+        pinch,
+    }
+}
+
+/// Zoom input for two fingers moving from `previous_span` to `span` pixels
+/// apart. The controller zooms by about (input ÷ viewport height) of the
+/// viewing distance per unit (with Bevy's default field of view), so this
+/// scales the distance by `previous_span / span`: the pinched scene follows
+/// the fingers.
+fn pinch_zoom(previous_span: f32, span: f32, window_height: f32) -> f32 {
+    (1.0 - previous_span.max(MIN_PINCH_SPAN) / span.max(MIN_PINCH_SPAN)) * window_height
+}
+
+/// Drives the camera controller from the mouse and the fingers.
 ///
 /// Motions use no picking anchor: the camera orbits, pans and zooms about the
 /// point straight ahead at the current viewing distance — the view centre,
 /// which is also the menu's pinned focus point when one is selected.
 ///
-/// Whether a gesture starts over the UI is decided when it starts, from egui's
-/// report on the previous frame (the pointer already hovers the UI before a
-/// press or scroll lands on it), then held until the gesture ends: a drag
-/// started in the scene keeps orbiting when it crosses a panel or a window,
-/// and one started on the UI (a slider, a window title bar) never moves the
-/// camera. Each wheel scroll is checked, though, so scrolling a panel or a
-/// window right after zooming the scene scrolls the UI.
+/// Whether a gesture starts over the UI is decided when it starts, then held
+/// until it ends: a drag started in the scene keeps orbiting when it crosses a
+/// panel or a window, and one started on the UI (a slider, a window title bar)
+/// never moves the camera. A mouse gesture is checked against egui's report on
+/// the previous frame (the pointer already hovers the UI before a press or
+/// scroll lands on it), a touch gesture against egui's report on the frame its
+/// first finger landed (see [`Gesture::TouchPending`]). Each wheel scroll is
+/// checked, though, so scrolling a panel or a window right after zooming the
+/// scene scrolls the UI.
 fn drive_camera(
     mut gesture: Local<Gesture>,
+    mut last_fingers: Local<Vec<(u64, Vec2)>>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     mouse_motion: Res<AccumulatedMouseMotion>,
     mut mouse_wheel: MessageReader<MouseWheel>,
+    touches: Res<Touches>,
     window_q: Query<&Window, With<PrimaryWindow>>,
     side_panel_rects: Res<SidePanelRects>,
     egui_wants_input: Res<EguiWantsInput>,
@@ -147,15 +266,23 @@ fn drive_camera(
             MouseScrollUnit::Pixel => wheel.y,
         })
         .sum();
+    let window = window_q.single().ok();
+    let mut fingers: Vec<_> = touches.iter().map(|touch| (touch.id(), touch.position())).collect();
+    fingers.sort_unstable_by_key(|&(id, _)| id);
+    let touch = touch_frame(&fingers, &last_fingers, window.map_or(0.0, Window::height));
+    *last_fingers = fingers;
+
     let Ok(mut camera) = camera_q.single_mut() else { return; };
-    let over_ui = window_q.single().is_ok_and(|window| {
-        camera_input_blocked(
-            window.cursor_position(),
-            &side_panel_rects,
-            egui_wants_input.wants_any_pointer_input(),
-            egui_wants_input.wants_keyboard_input(),
-        )
-    });
+    let pointer = match *gesture {
+        Gesture::TouchPending(landed_at) => Some(landed_at),
+        _ => window.and_then(Window::cursor_position),
+    };
+    let over_ui = camera_input_blocked(
+        pointer,
+        &side_panel_rects,
+        egui_wants_input.wants_any_pointer_input(),
+        egui_wants_input.wants_keyboard_input(),
+    );
     // Rest is when no wheel input arrived for twice the zoom smoothing window
     // (as Bevy's example input plugin decides it)
     let zoom_settled = camera.current_motion.inputs().is_none_or(|inputs| {
@@ -165,8 +292,10 @@ fn drive_camera(
         buttons: &mouse_buttons,
         motion: mouse_motion.delta,
         wheel,
+        touch,
         over_ui,
         zoom_settled,
+        pan_enabled: camera.enabled_motion.pan,
     };
     let (next, commands) = step(*gesture, &frame);
     *gesture = next;
@@ -238,8 +367,8 @@ mod tests {
         assert!(camera_input_blocked(None, &rects, false, true));
     }
 
-    /// Steps the gesture through one frame, then ages the button state the
-    /// way Bevy's input plugin does between frames.
+    /// Steps the gesture through one mouse frame, then ages the button state
+    /// the way Bevy's input plugin does between frames.
     fn run(
         gesture: &mut Gesture,
         buttons: &mut ButtonInput<MouseButton>,
@@ -247,7 +376,15 @@ mod tests {
         wheel: f32,
         zoom_settled: bool,
     ) -> Vec<ControllerCommand> {
-        let frame = Frame { buttons, motion: Vec2::new(3.0, -2.0), wheel, over_ui, zoom_settled };
+        let frame = Frame {
+            buttons,
+            motion: Vec2::new(3.0, -2.0),
+            wheel,
+            touch: TouchFrame::default(),
+            over_ui,
+            zoom_settled,
+            pan_enabled: true,
+        };
         let (next, commands) = step(*gesture, &frame);
         *gesture = next;
         buttons.clear();
@@ -354,6 +491,108 @@ mod tests {
         assert_eq!(gesture, Gesture::Ignored);
     }
 
+    /// Steps the gesture through one touch frame.
+    fn run_touch(gesture: &mut Gesture, touch: TouchFrame, over_ui: bool, pan_enabled: bool) -> Vec<ControllerCommand> {
+        let frame = Frame {
+            buttons: &ButtonInput::default(),
+            motion: Vec2::ZERO,
+            wheel: 0.0,
+            touch,
+            over_ui,
+            zoom_settled: true,
+            pan_enabled,
+        };
+        let (next, commands) = step(*gesture, &frame);
+        *gesture = next;
+        commands
+    }
+
+    fn fingers(count: usize) -> TouchFrame {
+        TouchFrame { fingers: count, landed_at: None, motion: Vec2::new(4.0, 1.0), pinch: 0.5 }
+    }
+
+    const TOUCH_INPUT: ControllerCommand = ControllerCommand::Input { motion: Vec2::new(4.0, 1.0), zoom: 0.5 };
+
+    #[test]
+    fn finger_count_picks_the_motion() {
+        use ControllerCommand::*;
+        let mut gesture = Gesture::Idle;
+        let landing = TouchFrame { landed_at: Some(SCENE), ..fingers(1) };
+        assert!(run_touch(&mut gesture, landing, false, true).is_empty(), "waits for egui's report");
+        assert_eq!(gesture, Gesture::TouchPending(SCENE));
+        assert_eq!(run_touch(&mut gesture, fingers(1), false, true), [StartOrbit, TOUCH_INPUT]);
+        assert_eq!(run_touch(&mut gesture, fingers(1), false, true), [TOUCH_INPUT]);
+        assert_eq!(run_touch(&mut gesture, fingers(2), false, true), [StartPan, TOUCH_INPUT]);
+        assert_eq!(run_touch(&mut gesture, fingers(2), false, true), [TOUCH_INPUT]);
+        assert_eq!(run_touch(&mut gesture, fingers(1), false, true), [StartOrbit, TOUCH_INPUT], "back to orbit");
+        assert_eq!(run_touch(&mut gesture, fingers(0), false, true), [End]);
+        assert_eq!(gesture, Gesture::Idle);
+    }
+
+    /// With a pinned focus, two fingers only pinch-zoom (no pan).
+    #[test]
+    fn two_fingers_only_zoom_a_pinned_focus() {
+        let mut gesture = Gesture::Touch(1);
+        assert_eq!(
+            run_touch(&mut gesture, fingers(2), false, false),
+            [ControllerCommand::StartZoom, TOUCH_INPUT]
+        );
+    }
+
+    /// A touch is checked where it landed, on the next frame, and a gesture
+    /// started on the UI is ignored until every finger is up — fingers added
+    /// meanwhile included.
+    #[test]
+    fn touch_landing_on_the_ui_is_ignored_until_every_finger_is_up() {
+        let mut gesture = Gesture::TouchPending(LEFT_PANEL);
+        assert!(run_touch(&mut gesture, fingers(1), true, true).is_empty());
+        assert_eq!(gesture, Gesture::Ignored);
+        assert!(run_touch(&mut gesture, fingers(2), false, true).is_empty());
+        assert!(run_touch(&mut gesture, fingers(0), false, true).is_empty());
+        assert_eq!(gesture, Gesture::Idle);
+    }
+
+    #[test]
+    fn a_tap_moves_nothing() {
+        let mut gesture = Gesture::TouchPending(SCENE);
+        assert!(run_touch(&mut gesture, fingers(0), false, true).is_empty());
+        assert_eq!(gesture, Gesture::Idle);
+    }
+
+    #[test]
+    fn touch_frame_tracks_fingers_between_frames() {
+        let (a, b) = (Vec2::new(500.0, 300.0), Vec2::new(600.0, 300.0));
+        // First finger landing
+        let landed = touch_frame(&[(7, a)], &[], 720.0);
+        assert_eq!(landed, TouchFrame { fingers: 1, landed_at: Some(a), motion: Vec2::ZERO, pinch: 0.0 });
+        // A second finger landing: it has not moved yet, and no pinch is
+        // measured on the frame the finger set changes
+        let moved = Vec2::new(10.0, 0.0);
+        let second = touch_frame(&[(7, a + moved), (9, b)], &[(7, a)], 720.0);
+        assert_eq!(second.landed_at, None);
+        assert_eq!(second.motion, moved / 2.0);
+        assert_eq!(second.pinch, 0.0);
+        // Both held still: no motion at all (unlike `Touch::delta`)
+        let still = touch_frame(&[(7, a), (9, b)], &[(7, a), (9, b)], 720.0);
+        assert_eq!((still.motion, still.pinch), (Vec2::ZERO, 0.0));
+        // Spreading from 100 to 200 px apart halves the viewing distance
+        let spread = touch_frame(
+            &[(7, a - Vec2::X * 50.0), (9, b + Vec2::X * 50.0)],
+            &[(7, a), (9, b)],
+            720.0,
+        );
+        assert_eq!(spread.motion, Vec2::ZERO);
+        assert_eq!(spread.pinch, 0.5 * 720.0);
+    }
+
+    #[test]
+    fn pinch_zoom_follows_the_fingers() {
+        assert_eq!(pinch_zoom(100.0, 200.0, 800.0), 400.0, "spreading zooms in");
+        assert_eq!(pinch_zoom(200.0, 100.0, 800.0), -800.0, "pinching zooms out");
+        assert_eq!(pinch_zoom(150.0, 150.0, 800.0), 0.0);
+        assert!(pinch_zoom(0.0, 30.0, 800.0).is_finite(), "fingers landing on top of each other");
+    }
+
     /// Headless App running the input system against a primary window with
     /// the panels above and a controller component (the controller's own
     /// update needs a rendering camera, so only the motion it is told to start
@@ -379,6 +618,10 @@ mod tests {
 
     fn mouse_button(app: &mut App, window: Entity, button: MouseButton, state: ButtonState) {
         app.world_mut().write_message(MouseButtonInput { button, state, window });
+    }
+
+    fn touch(app: &mut App, window: Entity, id: u64, phase: TouchPhase, position: Vec2) {
+        app.world_mut().write_message(TouchInput { phase, position, window, force: None, id });
     }
 
     fn controller(app: &App, camera: Entity) -> &PanOrbitCamera {
@@ -429,6 +672,33 @@ mod tests {
         app.world_mut().get_mut::<PanOrbitCamera>(camera).unwrap().enabled_motion.pan = false;
         move_cursor(&mut app, window, SCENE);
         mouse_button(&mut app, window, MouseButton::Right, ButtonState::Pressed);
+        app.update();
+        assert!(!controller(&app, camera).current_motion.is_user_controlled());
+    }
+
+    #[test]
+    fn fingers_drive_the_controller() {
+        let (mut app, window, camera) = input_app();
+        touch(&mut app, window, 0, TouchPhase::Started, SCENE);
+        app.update();
+        assert!(!controller(&app, camera).current_motion.is_user_controlled(), "waits a frame");
+        app.update();
+        assert!(controller(&app, camera).current_motion.is_orbiting());
+        touch(&mut app, window, 1, TouchPhase::Started, SCENE + Vec2::new(80.0, 0.0));
+        app.update();
+        assert!(controller(&app, camera).current_motion.is_panning());
+        touch(&mut app, window, 1, TouchPhase::Ended, SCENE + Vec2::new(80.0, 0.0));
+        app.update();
+        assert!(controller(&app, camera).current_motion.is_orbiting());
+        touch(&mut app, window, 0, TouchPhase::Ended, SCENE);
+        app.update();
+        assert!(!controller(&app, camera).current_motion.is_user_controlled());
+
+        // A finger landing on a panel leaves the camera alone
+        touch(&mut app, window, 2, TouchPhase::Started, RIGHT_PANEL);
+        app.update();
+        touch(&mut app, window, 2, TouchPhase::Moved, SCENE);
+        app.update();
         app.update();
         assert!(!controller(&app, camera).current_motion.is_user_controlled());
     }
